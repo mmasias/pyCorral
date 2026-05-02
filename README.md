@@ -1,4 +1,4 @@
-# CORRAL - Claude: Orquestador de Recursos Remotos para Agentes en Loop
+# CORRAL: Claude Orchestrated Runtime for Remote Agent Loop
 
 <div align=right>
 <sub><b>Claude Orchestrated Runtime for Remote Agent Loop</b><i><br>Sistema para que Claude Code<br>invoque agentes LLM externos (Gemini, OpenCode/z.ai)<br>como herramientas MCP durante sesiones de trabajo autónomo</i></sub>
@@ -8,11 +8,13 @@
 
 <img src="images/corral.png" width=30% align=right>
 
-Claude Code ya tiene el bucle de control, el acceso al filesystem y el criterio de parada. Lo que no tiene es capacidad para delegar subproblemas a otros modelos con perspectivas distintas.
+En un entorno habitual de trabajo con LLMs, un usuario tiene ya instalados varios clientes CLI: Claude Code, Gemini, OpenCode u otros. Cada uno tiene sus puntos fuertes, sus modelos y sus costes. El problema es que operan en silos: no hay forma nativa de que uno invoque a otro.
+
+Claude Code ya tiene el bucle de control, el acceso al filesystem y el criterio de parada. Lo que no tiene es capacidad para delegar subproblemas a otros modelos con perspectivas distintas. CORRAL resuelve eso exponiendo cada CLI externo como herramienta MCP: Claude Code llama a `gemini_run` o `opencode_run` igual que llama a `bash`.
 
 El problema no es solo técnico. Los modelos LLM tienen costes de razonamiento distintos: mantener a Claude concentrado en la coordinación y el criterio de calidad, mientras tareas de generación simple (borradores, análisis, ficheros) se delegan a modelos más rápidos y baratos, es una decisión de diseño que afecta tanto al coste como al resultado final.
 
-Las plataformas SaaS de orquestación ofrecen esta capacidad, pero a cambio de pérdida de control, dependencia de proveedor y envío de datos a intermediarios. Este sistema resuelve el mismo problema desde la infraestructura propia: cada CLI externo se expone como herramienta MCP, y Claude Code lo invoca igual que invoca bash.
+Las plataformas SaaS de orquestación ofrecen esta capacidad, pero a cambio de pérdida de control, dependencia de proveedor y envío de datos a intermediarios. Este sistema resuelve el mismo problema desde la infraestructura propia.
 
 ## ¿Qué?
 
