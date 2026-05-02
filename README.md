@@ -1,7 +1,7 @@
-# CORRAL: Claude Orchestrated Runtime for Remote Agent Loop
+# Claude: Orquestador de Recursos Remotos para Agentes en Loop
 
 <div align=right>
-<sub><b>Claude Orchestrated Runtime for Remote Agent Loop</b><i><br>Sistema para que Claude Code<br>invoque agentes LLM externos (Gemini, OpenCode/z.ai)<br>como herramientas MCP durante sesiones de trabajo autónomo</i></sub>
+<sub><b>CORRAL: Claude Orchestrated Runtime for Remote Agent Loop</b><i><br>Sistema que permite que Claude Code invoque agentes LLM externos<br> como herramientas MCP durante sesiones de trabajo autónomo</i></sub>
 </div>
 
 ## ¿Por qué?
