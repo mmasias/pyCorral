@@ -16,6 +16,10 @@ El problema no es solo técnico. Los modelos LLM tienen costes de razonamiento d
 
 Las plataformas SaaS de orquestación ofrecen esta capacidad, pero a cambio de pérdida de control, dependencia de proveedor y envío de datos a intermediarios. Este sistema resuelve el mismo problema desde la infraestructura propia.
 
+|||
+|-|-|
+Combinado con [myClaudeContext](https://github.com/mmasias/myClaudeContext-template) - un sistema de sincronización de contexto y memoria entre máquinas - CORRAL completa la ecuación: myClaudeContext aporta la memoria persistente y el contexto compartido; CORRAL aporta la invocación en tiempo real de agentes subordinados.|<sub>El contexto de cada agente se delimita por convención de ficheros: Gemini CLI carga `~/.gemini/GEMINI.md` como contexto global y el `GEMINI.md` del directorio de trabajo como contexto de proyecto. Si esos ficheros están sincronizados entre máquinas - por ejemplo mediante un repo de contexto compartido - cada agente subordinado opera con el mismo conocimiento de base que el orquestador, sin configuración adicional. El `workdir` que CORRAL pasa a cada agente actúa como frontera de contexto natural: arrancas Claude Code desde el directorio que te interesa, y ese scope se propaga automáticamente a los agentes delegados.</sub>
+
 ## ¿Qué?
 
 ### Arquitectura: Control Plane / Data Plane
