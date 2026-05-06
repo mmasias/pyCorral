@@ -47,9 +47,11 @@ else
     echo "  OpenCode encontrado en: $OPENCODE_PATH"
 fi
 
-# 4. Preparar directorio de instalación
-echo "[4/9] Creando ~/mcp-servers/..."
+# 4. Preparar directorios de instalación
+echo "[4/9] Creando ~/mcp-servers/ y ~/misRepos/corral/..."
 mkdir -p ~/mcp-servers
+mkdir -p ~/misRepos/corral/gemini
+mkdir -p ~/misRepos/corral/opencode
 
 # 5. Copiar scripts
 echo "[5/9] Copiando scripts desde servers/..."

@@ -27,6 +27,8 @@ def _find_opencode() -> str:
 
 OPENCODE_BIN = _find_opencode()
 WRAPPER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "opencode-wrapper.sh")
+DEFAULT_WORKDIR = os.path.expanduser("~/misRepos/corral/opencode")
+OUTPUT_SUFFIX = "\n\nEscribe tu respuesta en: output.md"
 
 
 def make_env() -> dict:
@@ -49,26 +51,26 @@ async def list_tools():
     return [
         Tool(
             name="opencode_run",
-            description="Ejecuta OpenCode de forma sincrona via wrapper.",
+            description="Ejecuta OpenCode de forma sincrona via wrapper. La respuesta se escribe en output.md dentro de workdir.",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "prompt": {"type": "string"},
-                    "workdir": {"type": "string"},
+                    "workdir": {"type": "string", "description": "Directorio de trabajo (default: ~/misRepos/corral/opencode)"},
                 },
-                "required": ["prompt", "workdir"],
+                "required": ["prompt"],
             },
         ),
         Tool(
             name="opencode_run_async",
-            description="Ejecuta OpenCode en segundo plano via wrapper y devuelve un job_id.",
+            description="Ejecuta OpenCode en segundo plano via wrapper y devuelve un job_id. La respuesta se escribe en output.md dentro de workdir.",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "prompt": {"type": "string"},
-                    "workdir": {"type": "string"},
+                    "workdir": {"type": "string", "description": "Directorio de trabajo (default: ~/misRepos/corral/opencode)"},
                 },
-                "required": ["prompt", "workdir"],
+                "required": ["prompt"],
             },
         ),
         Tool(
@@ -95,12 +97,13 @@ def _write_prompt_file(prefix: str, prompt: str) -> str:
 @app.call_tool()
 async def call_tool(name: str, arguments: dict):
     if name == "opencode_run":
-        pid = os.getpid()
-        prompt_file = _write_prompt_file(str(pid), arguments["prompt"])
+        workdir = arguments.get("workdir", DEFAULT_WORKDIR)
+        os.makedirs(workdir, exist_ok=True)
+        prompt_file = _write_prompt_file(str(os.getpid()), arguments["prompt"] + OUTPUT_SUFFIX)
         proc = subprocess.run(
             [WRAPPER, prompt_file],
             env=make_env(),
-            cwd=arguments["workdir"],
+            cwd=workdir,
             stdin=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.PIPE,
@@ -114,11 +117,13 @@ async def call_tool(name: str, arguments: dict):
 
     if name == "opencode_run_async":
         job_id = uuid.uuid4().hex[:12]
-        prompt_file = _write_prompt_file(job_id, arguments["prompt"])
+        workdir = arguments.get("workdir", DEFAULT_WORKDIR)
+        os.makedirs(workdir, exist_ok=True)
+        prompt_file = _write_prompt_file(job_id, arguments["prompt"] + OUTPUT_SUFFIX)
         proc = subprocess.Popen(
             [WRAPPER, prompt_file],
             env=make_env(),
-            cwd=arguments["workdir"],
+            cwd=workdir,
             stdin=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,

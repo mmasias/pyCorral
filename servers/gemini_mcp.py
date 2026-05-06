@@ -3,6 +3,7 @@ import glob
 import os
 import shutil
 import subprocess
+import uuid
 
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
@@ -25,6 +26,8 @@ def _find_gemini() -> str:
 
 
 GEMINI_BIN = _find_gemini()
+DEFAULT_WORKDIR = os.path.expanduser("~/misRepos/corral/gemini")
+OUTPUT_SUFFIX = "\n\nEscribe tu respuesta en: output.md"
 
 _jobs: dict[str, subprocess.Popen] = {}
 
@@ -36,26 +39,26 @@ async def list_tools():
     return [
         Tool(
             name="gemini_run",
-            description="Ejecuta Gemini CLI de forma sincrona.",
+            description="Ejecuta Gemini CLI de forma sincrona. La respuesta se escribe en output.md dentro de workdir.",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "prompt": {"type": "string"},
-                    "workdir": {"type": "string"},
+                    "workdir": {"type": "string", "description": "Directorio de trabajo (default: ~/misRepos/corral/gemini)"},
                 },
-                "required": ["prompt", "workdir"],
+                "required": ["prompt"],
             },
         ),
         Tool(
             name="gemini_run_async",
-            description="Ejecuta Gemini CLI en segundo plano y devuelve un job_id.",
+            description="Ejecuta Gemini CLI en segundo plano y devuelve un job_id. La respuesta se escribe en output.md dentro de workdir.",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "prompt": {"type": "string"},
-                    "workdir": {"type": "string"},
+                    "workdir": {"type": "string", "description": "Directorio de trabajo (default: ~/misRepos/corral/gemini)"},
                 },
-                "required": ["prompt", "workdir"],
+                "required": ["prompt"],
             },
         ),
         Tool(
@@ -75,9 +78,12 @@ async def list_tools():
 @app.call_tool()
 async def call_tool(name: str, arguments: dict):
     if name == "gemini_run":
+        workdir = arguments.get("workdir", DEFAULT_WORKDIR)
+        os.makedirs(workdir, exist_ok=True)
+        prompt = arguments["prompt"] + OUTPUT_SUFFIX
         proc = subprocess.run(
-            [GEMINI_BIN, "-y", "--skip-trust", "-p", arguments["prompt"]],
-            cwd=arguments["workdir"],
+            [GEMINI_BIN, "-y", "-p", prompt],
+            cwd=workdir,
             stdin=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.PIPE,
@@ -90,10 +96,13 @@ async def call_tool(name: str, arguments: dict):
         return [TextContent(type="text", text=text)]
 
     if name == "gemini_run_async":
-        job_id = str(id(arguments)) + "_" + str(os.getpid())
+        job_id = str(uuid.uuid4())[:8]
+        workdir = arguments.get("workdir", DEFAULT_WORKDIR)
+        os.makedirs(workdir, exist_ok=True)
+        prompt = arguments["prompt"] + OUTPUT_SUFFIX
         proc = subprocess.Popen(
-            [GEMINI_BIN, "-y", "--skip-trust", "-p", arguments["prompt"]],
-            cwd=arguments["workdir"],
+            [GEMINI_BIN, "-y", "-p", prompt],
+            cwd=workdir,
             stdin=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
