@@ -28,7 +28,6 @@ def _find_opencode() -> str:
 OPENCODE_BIN = _find_opencode()
 WRAPPER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "opencode-wrapper.sh")
 DEFAULT_WORKDIR = os.path.expanduser("~/misRepos/corral/opencode")
-OUTPUT_SUFFIX = "\n\nEscribe tu respuesta en: output.md"
 
 
 def make_env() -> dict:
@@ -99,7 +98,7 @@ async def call_tool(name: str, arguments: dict):
     if name == "opencode_run":
         workdir = arguments.get("workdir", DEFAULT_WORKDIR)
         os.makedirs(workdir, exist_ok=True)
-        prompt_file = _write_prompt_file(str(os.getpid()), arguments["prompt"] + OUTPUT_SUFFIX)
+        prompt_file = _write_prompt_file(str(os.getpid()), arguments["prompt"])
         proc = subprocess.run(
             [WRAPPER, prompt_file],
             env=make_env(),
@@ -119,7 +118,7 @@ async def call_tool(name: str, arguments: dict):
         job_id = uuid.uuid4().hex[:12]
         workdir = arguments.get("workdir", DEFAULT_WORKDIR)
         os.makedirs(workdir, exist_ok=True)
-        prompt_file = _write_prompt_file(job_id, arguments["prompt"] + OUTPUT_SUFFIX)
+        prompt_file = _write_prompt_file(job_id, arguments["prompt"])
         proc = subprocess.Popen(
             [WRAPPER, prompt_file],
             env=make_env(),

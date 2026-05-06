@@ -27,7 +27,6 @@ def _find_gemini() -> str:
 
 GEMINI_BIN = _find_gemini()
 DEFAULT_WORKDIR = os.path.expanduser("~/misRepos/corral/gemini")
-OUTPUT_SUFFIX = "\n\nEscribe tu respuesta en: output.md"
 
 _jobs: dict[str, subprocess.Popen] = {}
 
@@ -80,9 +79,8 @@ async def call_tool(name: str, arguments: dict):
     if name == "gemini_run":
         workdir = arguments.get("workdir", DEFAULT_WORKDIR)
         os.makedirs(workdir, exist_ok=True)
-        prompt = arguments["prompt"] + OUTPUT_SUFFIX
         proc = subprocess.run(
-            [GEMINI_BIN, "-y", "-p", prompt],
+            [GEMINI_BIN, "-y", "-p", arguments["prompt"]],
             cwd=workdir,
             stdin=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL,
@@ -99,9 +97,8 @@ async def call_tool(name: str, arguments: dict):
         job_id = str(uuid.uuid4())[:8]
         workdir = arguments.get("workdir", DEFAULT_WORKDIR)
         os.makedirs(workdir, exist_ok=True)
-        prompt = arguments["prompt"] + OUTPUT_SUFFIX
         proc = subprocess.Popen(
-            [GEMINI_BIN, "-y", "-p", prompt],
+            [GEMINI_BIN, "-y", "-p", arguments["prompt"]],
             cwd=workdir,
             stdin=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL,
