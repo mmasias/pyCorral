@@ -64,8 +64,8 @@ echo "  Scripts copiados a ~/mcp-servers/"
 # 6. Configurar modelo de OpenCode
 echo "[6/9] Configurando modelo para OpenCode..."
 if [ -n "$OPENCODE_PATH" ]; then
-    echo "Modelos disponibles (primeros 20):"
-    opencode models 2>/dev/null | head -20 || echo "  No se pudieron listar modelos (¿estás autenticado?)"
+    echo "Modelos disponibles (zai):"
+    opencode models 2>/dev/null | grep "^zai" || echo "  No se pudieron listar modelos (¿estás autenticado?)"
     
     DEFAULT_MODEL="opencode/big-pickle"
     read -p "Introduce el modelo de OpenCode a usar [$DEFAULT_MODEL]: " SELECTED_MODEL
