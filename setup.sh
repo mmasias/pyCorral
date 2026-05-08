@@ -48,10 +48,9 @@ else
 fi
 
 # 4. Preparar directorios de instalación
-echo "[4/9] Creando ~/mcp-servers/ y ~/misRepos/corral/..."
+echo "[4/9] Creando ~/mcp-servers/ y directorios de trabajo CORRAL..."
 mkdir -p ~/mcp-servers
-mkdir -p ~/misRepos/corral/gemini
-mkdir -p ~/misRepos/corral/opencode
+mkdir -p ~/misRepos/corral/gemini ~/misRepos/corral/opencode ~/misRepos/corral/tasks
 
 # 5. Copiar scripts
 echo "[5/9] Copiando scripts desde servers/..."
