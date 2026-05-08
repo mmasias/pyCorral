@@ -28,7 +28,7 @@ def _find_gemini() -> str:
 GEMINI_BIN = _find_gemini()
 DEFAULT_WORKDIR = os.path.expanduser("~/misRepos/corral/gemini")
 
-_jobs: dict[str, subprocess.Popen] = {}
+_jobs: dict[str, tuple] = {}
 
 app = Server("gemini-mcp")
 
@@ -97,28 +97,35 @@ async def call_tool(name: str, arguments: dict):
         job_id = str(uuid.uuid4())[:8]
         workdir = arguments.get("workdir", DEFAULT_WORKDIR)
         os.makedirs(workdir, exist_ok=True)
+        log_path = f"/tmp/gemini_job_{job_id}.log"
+        log_file = open(log_path, "w")
         proc = subprocess.Popen(
             [GEMINI_BIN, "-y", "-p", arguments["prompt"]],
             cwd=workdir,
             stdin=subprocess.DEVNULL,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
+            stdout=log_file,
+            stderr=log_file,
         )
-        _jobs[job_id] = proc
+        _jobs[job_id] = (proc, log_path)
         return [TextContent(type="text", text=job_id)]
 
     if name == "gemini_done":
         job_id = arguments["job_id"]
-        proc = _jobs.get(job_id)
-        if proc is None:
+        entry = _jobs.get(job_id)
+        if entry is None:
             return [TextContent(type="text", text=f"error: job {job_id} no encontrado")]
+        proc, log_path = entry
         ret = proc.poll()
         if ret is None:
             return [TextContent(type="text", text="pendiente")]
         del _jobs[job_id]
         if ret == 0:
             return [TextContent(type="text", text="listo")]
-        return [TextContent(type="text", text=f"error: rc={ret}")]
+        try:
+            log = open(log_path).read()[-2000:]
+        except Exception:
+            log = "(sin log)"
+        return [TextContent(type="text", text=f"error: rc={ret}\n{log}")]
 
     raise ValueError(f"Herramienta desconocida: {name}")
 
