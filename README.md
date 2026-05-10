@@ -203,7 +203,7 @@ python3 -c "import ast; ast.parse(open('servers/opencode_mcp.py').read()); print
 python3 -c "import ast; ast.parse(open('servers/ollama_mcp.py').read()); print('ok')"
 
 mkdir -p /tmp/gemini_test
-cd /tmp/gemini_test && gemini -y --skip-trust -p "Crea un fichero llamado hola.txt con el texto 'hola mundo'"
+cd /tmp/gemini_test && gemini -y -p "Crea un fichero llamado hola.txt con el texto 'hola mundo'"
 ls /tmp/gemini_test/
 
 mkdir -p /tmp/opencode_test
