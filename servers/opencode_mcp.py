@@ -40,7 +40,7 @@ def make_env() -> dict:
     }
 
 
-_jobs: dict[str, subprocess.Popen] = {}
+_jobs: dict[str, tuple[subprocess.Popen, str, object, object]] = {}
 
 app = Server("opencode-mcp")
 
@@ -99,19 +99,24 @@ async def call_tool(name: str, arguments: dict):
         workdir = arguments.get("workdir", DEFAULT_WORKDIR)
         os.makedirs(workdir, exist_ok=True)
         prompt_file = _write_prompt_file(str(os.getpid()), arguments["prompt"])
-        proc = subprocess.run(
-            [WRAPPER, prompt_file],
-            env=make_env(),
-            cwd=workdir,
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.PIPE,
-            timeout=300,
-        )
+        output_path = os.path.join(workdir, "output.md")
+        log_path = f"/tmp/opencode_sync_{os.getpid()}.log"
+        with open(output_path, "w") as out_f, open(log_path, "w") as err_f:
+            proc = subprocess.run(
+                [WRAPPER, prompt_file],
+                env=make_env(),
+                cwd=workdir,
+                stdin=subprocess.DEVNULL,
+                stdout=out_f,
+                stderr=err_f,
+                timeout=300,
+            )
         if proc.returncode == 0:
             text = "ok"
         else:
-            text = f"error (rc={proc.returncode}): {proc.stderr.decode(errors='replace')}"
+            with open(log_path, errors="replace") as f:
+                err = f.read()[-1000:]
+            text = f"error (rc={proc.returncode}): {err}"
         return [TextContent(type="text", text=text)]
 
     if name == "opencode_run_async":
@@ -119,29 +124,38 @@ async def call_tool(name: str, arguments: dict):
         workdir = arguments.get("workdir", DEFAULT_WORKDIR)
         os.makedirs(workdir, exist_ok=True)
         prompt_file = _write_prompt_file(job_id, arguments["prompt"])
+        output_path = os.path.join(workdir, "output.md")
+        log_path = f"/tmp/opencode_job_{job_id}.log"
+        out_f = open(output_path, "w")
+        log_f = open(log_path, "w")
         proc = subprocess.Popen(
             [WRAPPER, prompt_file],
             env=make_env(),
             cwd=workdir,
             stdin=subprocess.DEVNULL,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
+            stdout=out_f,
+            stderr=log_f,
         )
-        _jobs[job_id] = proc
+        _jobs[job_id] = (proc, log_path, out_f, log_f)
         return [TextContent(type="text", text=job_id)]
 
     if name == "opencode_done":
         job_id = arguments["job_id"]
-        proc = _jobs.get(job_id)
-        if proc is None:
+        entry = _jobs.get(job_id)
+        if entry is None:
             return [TextContent(type="text", text=f"error: job {job_id} no encontrado")]
+        proc, log_path, out_f, log_f = entry
         ret = proc.poll()
         if ret is None:
             return [TextContent(type="text", text="pendiente")]
+        out_f.close()
+        log_f.close()
         del _jobs[job_id]
         if ret == 0:
             return [TextContent(type="text", text="listo")]
-        return [TextContent(type="text", text=f"error: rc={ret}")]
+        with open(log_path, errors="replace") as f:
+            err = f.read()[-2000:]
+        return [TextContent(type="text", text=f"error: rc={ret}\n{err}")]
 
     raise ValueError(f"Herramienta desconocida: {name}")
 
