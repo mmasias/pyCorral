@@ -105,6 +105,21 @@ El patrón "agente como herramienta" permite añadir cualquier CLI con modo no-i
 
 Frente a plataformas SaaS: la ventaja es control total. La contrapartida es real: las plataformas cerradas incluyen observabilidad, retry logic y gestión de estado que aquí son responsabilidad del operador.
 
+### Frente a las alternativas
+
+<div align=center>
+
+| Alternativa | Sí | Pero | Y entonces CORRAL… |
+|---|---|---|---|
+| **LangChain** | Muy madura, gran ecosistema | Abstracción excesiva, difícil de depurar, tus datos pasan por su stack | CORRAL es transparente: cada llamada es un proceso que puedes inspeccionar, matar o redirigir desde el terminal |
+| **LlamaIndex** | Excelente para RAG y contexto documental | No es orquestación multi-agente real | CORRAL orquesta agentes heterogéneos con modelos y proveedores distintos, no documentos |
+| **CrewAI** | Multi-agente con roles, fácil de arrancar | Los agentes no son CLIs reales, todo ocurre dentro del mismo proceso Python | CORRAL usa CLIs reales con sus propios modelos y costes imputados a sus proveedores, no a uno solo |
+| **AutoGen** | Conversación entre agentes sofisticada | Complejo, opinionado, difícil de controlar el flujo | CORRAL delega el criterio al orquestador (Claude Code), no a un framework |
+| **n8n / Make** | Visual, rápido para flujos simples | Ejecuta recetas fijas, sin razonamiento | CORRAL no ejecuta un flujo predefinido: Claude Code decide en tiempo real qué delegar, a quién y cuándo recoger |
+| **Dify / Flowise** | GUI, cero código | Tus datos en servidores ajenos, sin control real | CORRAL corre en tu máquina, tus tokens van directo a cada proveedor, sin intermediarios |
+
+</div>
+
 ## ¿Cómo?
 
 ### Requisitos previos
