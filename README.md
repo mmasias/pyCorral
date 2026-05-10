@@ -26,7 +26,7 @@ El sistema opera bajo una separación de responsabilidades clara:
 
 |Control Plane|Data Plane|
 |-|-|
-**Claude Code**|**Gemini, OpenCode**
+**Claude Code**|**Gemini, OpenCode, Ollama**
 Decide, planifica, delega y ensambla. Es la unidad de razonamiento.|Ejecutan subproblemas acotados, producen artefactos y terminan sin estado persistente. No saben que están siendo orquestados.
 
 </div>
@@ -34,10 +34,17 @@ Decide, planifica, delega y ensambla. Es la unidad de razonamiento.|Ejecutan sub
 ```
 Claude Code (orquestador)
     │
+    │    
     ├── gemini_run / gemini_run_async / gemini_done
     │       └── gemini_mcp.py  ->  gemini CLI  ->  Google Gemini
-    └── opencode_run / opencode_run_async / opencode_done
-            └── opencode_mcp.py  ->  opencode-wrapper.sh  ->  z.ai / OpenCode
+    │
+    │    
+    ├── opencode_run / opencode_run_async / opencode_done
+    │       └── opencode_mcp.py  ->  opencode-wrapper.sh  ->  z.ai / OpenCode
+    │
+    │        
+    └── ollama_run / ollama_run_async / ollama_done
+            └── ollama_mcp.py  ->  HTTP API  ->  Ollama (local)
 ```
 
 ### El sistema de ficheros como bus de datos
@@ -53,13 +60,13 @@ Esto elimina la dependencia de flujos de texto volátiles y permite verificació
 
 | Herramienta | Modo | Comportamiento |
 |---|---|---|
-| gemini_run / opencode_run | Síncrono | Bloquea hasta terminar; escribe ficheros en workdir |
-| gemini_run_async / opencode_run_async | Async | Devuelve job_id inmediatamente |
-| gemini_done / opencode_done | Consulta | Devuelve "pendiente", "listo" o "error: ..." |
+| gemini_run / opencode_run / ollama_run | Síncrono | Bloquea hasta terminar; escribe ficheros en workdir |
+| gemini_run_async / opencode_run_async / ollama_run_async | Async | Devuelve job_id inmediatamente |
+| gemini_done / opencode_done / ollama_done | Consulta | Devuelve "pendiente", "listo" o "error: ..." |
 
 </div>
 
-Ambos servidores son estructuralmente idénticos — solo difieren en el binario que invocan. Los tokens de cada agente se imputan a su propio proveedor, no a Anthropic.
+Los tres servidores son estructuralmente idénticos — solo difieren en el mecanismo de invocación. Los tokens de Gemini y OpenCode se imputan a su propio proveedor; Ollama es local y no tiene coste de API.
 
 ### Limitaciones actuales
 
@@ -84,6 +91,7 @@ Ambos servidores son estructuralmente idénticos — solo difieren en el binario
 |---|---|---|
 | Gemini | Verificador / critic | ~30 segundos |
 | OpenCode / GLM-5.1 | Generador / arquitecto | ~2-3 minutos |
+| Ollama / qwen2.5:14b | Inferencia local / sin coste de API | variable (CPU-only) |
 
 </div>
 
@@ -105,6 +113,7 @@ Frente a plataformas SaaS: la ventaja es control total. La contrapartida es real
 - gemini CLI instalado y autenticado
 - opencode CLI instalado y autenticado con z.ai (v1.14+ para modo no-interactivo)
 - Python 3.x con pip3 disponible
+- Ollama instalado y ejecutándose (`ollama serve`) — opcional, solo para el agente local
 
 ### 1. Instalar dependencia Python
 
@@ -142,6 +151,7 @@ mkdir -p ~/mcp-servers
 cp servers/gemini_mcp.py ~/mcp-servers/
 cp servers/opencode_mcp.py ~/mcp-servers/
 cp servers/opencode-wrapper.sh ~/mcp-servers/
+cp servers/ollama_mcp.py ~/mcp-servers/
 chmod +x ~/mcp-servers/opencode-wrapper.sh
 ```
 
@@ -152,11 +162,30 @@ Añadir a `~/.bashrc` o `~/.zshrc`:
 export CORRAL_OPENCODE_MODEL="zai-coding-plan/glm-5.1"  # sustituir por el modelo detectado
 ```
 
+### Configurar Ollama (opcional)
+
+Verificar que Ollama está corriendo:
+```bash
+curl http://127.0.0.1:11434/api/tags
+```
+
+Para usar un modelo distinto al default (`qwen2.5:14b`), añadir a `~/.bashrc` o `~/.zshrc`:
+```bash
+export CORRAL_OLLAMA_MODEL="nombre-del-modelo"
+export CORRAL_OLLAMA_URL="http://127.0.0.1:11434"  # si escucha en otro puerto
+```
+
+Modelos disponibles:
+```bash
+ollama list
+```
+
 ### 6. Verificar scripts antes de registrar
 
 ```bash
 python3 -c "import ast; ast.parse(open('servers/gemini_mcp.py').read()); print('ok')"
 python3 -c "import ast; ast.parse(open('servers/opencode_mcp.py').read()); print('ok')"
+python3 -c "import ast; ast.parse(open('servers/ollama_mcp.py').read()); print('ok')"
 
 mkdir -p /tmp/gemini_test
 cd /tmp/gemini_test && gemini -y --skip-trust -p "Crea un fichero llamado hola.txt con el texto 'hola mundo'"
@@ -176,7 +205,8 @@ Añadir a `~/.claude/settings.json`:
   "permissions": {
     "allow": [
       "mcp__gemini__*",
-      "mcp__opencode__*"
+      "mcp__opencode__*",
+      "mcp__ollama__*"
     ]
   }
 }
@@ -187,6 +217,7 @@ Añadir a `~/.claude/settings.json`:
 ```bash
 claude mcp add gemini --scope user -- python3 ~/mcp-servers/gemini_mcp.py
 claude mcp add opencode --scope user -- python3 ~/mcp-servers/opencode_mcp.py
+claude mcp add ollama --scope user -- python3 ~/mcp-servers/ollama_mcp.py
 claude mcp list
 ```
 
@@ -194,7 +225,8 @@ claude mcp list
 
 Prueba 1 - OpenCode sync: `opencode_run` con workdir `/tmp/octest`, crear `hola.txt`
 Prueba 2 - Gemini sync: `gemini_run` con workdir `/tmp/gtest`, crear `resumen.md`
-Prueba 3 - async: `opencode_run_async`, anotar `job_id`, recoger con `opencode_done`
+Prueba 3 - Ollama sync: `ollama_run` con workdir `/tmp/oltest`, crear `resumen.md`
+Prueba 4 - async: `opencode_run_async`, anotar `job_id`, recoger con `opencode_done`
 
 ### Patrón de orquestación paralela
 
@@ -245,6 +277,23 @@ Causa: stdin heredado. Solución: `stdin=DEVNULL` en todos los `Popen`/`subproce
 ps aux | grep gemini
 ps aux | grep opencode
 ```
+
+### Ollama no responde
+```bash
+curl http://127.0.0.1:11434/api/tags
+```
+Si falla: `ollama serve` en otra terminal.
+
+### Ollama: modelo no encontrado
+```bash
+ollama list
+```
+Si falta el modelo: `ollama pull qwen2.5:14b`
+
+### Ollama: respuesta muy lenta
+Es CPU-only — los modelos grandes (14B) son lentos en hardware sin GPU. Opciones:
+- Usar un modelo más pequeño: `export CORRAL_OLLAMA_MODEL="qwen2.5:7b"`
+- Aceptar la latencia para tareas que no sean time-sensitive
 
 
 ## Experimentos

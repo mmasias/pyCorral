@@ -31,9 +31,10 @@ echo "[2/9] Instalando dependencia 'mcp'..."
 pip3 install mcp --break-system-packages 2>/dev/null || pip3 install mcp
 
 # 3. Detectar CLIs de agentes
-echo "[3/9] Detectando gemini y opencode..."
+echo "[3/9] Detectando gemini, opencode y ollama..."
 GEMINI_PATH=$(which gemini || true)
 OPENCODE_PATH=$(which opencode || true)
+OLLAMA_PATH=$(which ollama || true)
 
 if [ -z "$GEMINI_PATH" ]; then
     echo "Aviso: gemini CLI no encontrado. Deberás instalarlo para usar el servidor gemini."
@@ -47,16 +48,23 @@ else
     echo "  OpenCode encontrado en: $OPENCODE_PATH"
 fi
 
+if [ -z "$OLLAMA_PATH" ]; then
+    echo "Aviso: ollama no encontrado. El servidor ollama_mcp.py se copiará pero no estará activo."
+else
+    echo "  Ollama encontrado en: $OLLAMA_PATH"
+fi
+
 # 4. Preparar directorios de instalación
 echo "[4/9] Creando ~/mcp-servers/ y directorios de trabajo CORRAL..."
 mkdir -p ~/mcp-servers
-mkdir -p ~/misRepos/corral/gemini ~/misRepos/corral/opencode ~/misRepos/corral/tasks
+mkdir -p ~/misRepos/corral/gemini ~/misRepos/corral/opencode ~/misRepos/corral/ollama ~/misRepos/corral/tasks
 
 # 5. Copiar scripts
 echo "[5/9] Copiando scripts desde servers/..."
 cp servers/gemini_mcp.py ~/mcp-servers/
 cp servers/opencode_mcp.py ~/mcp-servers/
 cp servers/opencode-wrapper.sh ~/mcp-servers/
+cp servers/ollama_mcp.py ~/mcp-servers/
 chmod +x ~/mcp-servers/opencode-wrapper.sh
 echo "  Scripts copiados a ~/mcp-servers/"
 
@@ -97,6 +105,26 @@ if [ -n "$OPENCODE_PATH" ]; then
     export CORRAL_OPENCODE_MODEL="$SELECTED_MODEL"
 fi
 
+# 6b. Configurar Ollama (opcional)
+if [ -n "$OLLAMA_PATH" ]; then
+    read -p "¿Configurar modelo de Ollama ahora? (default: qwen2.5:14b) [s/N]: " CONFIGURE_OLLAMA
+    if [[ "$CONFIGURE_OLLAMA" =~ ^[sS]$ ]]; then
+        read -p "Modelo [qwen2.5:14b]: " OLLAMA_MODEL
+        OLLAMA_MODEL=${OLLAMA_MODEL:-qwen2.5:14b}
+        OLLAMA_EXPORT="export CORRAL_OLLAMA_MODEL=\"$OLLAMA_MODEL\""
+        if [ -f "$HOME/.bashrc" ] && ! grep -q "CORRAL_OLLAMA_MODEL" "$HOME/.bashrc"; then
+            echo "$OLLAMA_EXPORT" >> "$HOME/.bashrc"
+            echo "  Añadido a ~/.bashrc"
+        fi
+        if [ -f "$HOME/.zshrc" ] && ! grep -q "CORRAL_OLLAMA_MODEL" "$HOME/.zshrc"; then
+            echo "$OLLAMA_EXPORT" >> "$HOME/.zshrc"
+            echo "  Añadido a ~/.zshrc"
+        fi
+        export CORRAL_OLLAMA_MODEL="$OLLAMA_MODEL"
+        echo "  CORRAL_OLLAMA_MODEL=$OLLAMA_MODEL configurado."
+    fi
+fi
+
 # 7. Mostrar bloque de permisos para Claude Code
 echo "[7/9] Configuración de permisos para Claude Code..."
 echo "Asegúrate de que ~/.claude/settings.json incluya lo siguiente:"
@@ -106,7 +134,8 @@ cat <<EOF
   "permissions": {
     "allow": [
       "mcp__gemini__*",
-      "mcp__opencode__*"
+      "mcp__opencode__*",
+      "mcp__ollama__*"
     ]
   }
 }
@@ -118,10 +147,12 @@ echo "[8/9] Registrando servidores en Claude Code..."
 if command -v claude &> /dev/null; then
     claude mcp add gemini --scope user -- python3 "$HOME/mcp-servers/gemini_mcp.py"
     claude mcp add opencode --scope user -- python3 "$HOME/mcp-servers/opencode_mcp.py"
+    claude mcp add ollama --scope user -- python3 "$HOME/mcp-servers/ollama_mcp.py"
 else
     echo "Aviso: no se encontró el comando 'claude'. Regístralos manualmente más tarde:"
     echo "  claude mcp add gemini --scope user -- python3 ~/mcp-servers/gemini_mcp.py"
     echo "  claude mcp add opencode --scope user -- python3 ~/mcp-servers/opencode_mcp.py"
+    echo "  claude mcp add ollama --scope user -- python3 ~/mcp-servers/ollama_mcp.py"
 fi
 
 # 9. Finalización
