@@ -43,8 +43,12 @@ Claude Code (orquestador)
     │       └── opencode_mcp.py  ->  opencode-wrapper.sh  ->  z.ai / OpenCode
     │
     │        
-    └── ollama_run / ollama_run_async / ollama_done
-            └── ollama_mcp.py  ->  HTTP API  ->  Ollama (local)
+    ├── ollama_run / ollama_run_async / ollama_done
+    │       └── ollama_mcp.py  ->  HTTP API  ->  Ollama (local)
+    │
+    │        
+    └── kiro_run / kiro_run_async / kiro_done
+            └── kiro_mcp.py  ->  kiro-cli-chat CLI  ->  Kiro (AWS)
 ```
 
 ### El sistema de ficheros como bus de datos
@@ -60,9 +64,9 @@ Esto elimina la dependencia de flujos de texto volátiles y permite verificació
 
 | Herramienta | Modo | Comportamiento |
 |---|---|---|
-| gemini_run / opencode_run / ollama_run | Síncrono | Bloquea hasta terminar; escribe ficheros en workdir |
-| gemini_run_async / opencode_run_async / ollama_run_async | Async | Devuelve job_id inmediatamente |
-| gemini_done / opencode_done / ollama_done | Consulta | Devuelve "pendiente", "listo" o "error: ..." |
+| gemini_run / opencode_run / ollama_run / kiro_run | Síncrono | Bloquea hasta terminar; escribe ficheros en workdir |
+| gemini_run_async / opencode_run_async / ollama_run_async / kiro_run_async | Async | Devuelve job_id inmediatamente |
+| gemini_done / opencode_done / ollama_done / kiro_done | Consulta | Devuelve "pendiente", "listo" o "error: ..." |
 
 </div>
 
@@ -92,6 +96,7 @@ Los tres servidores son estructuralmente idénticos — solo difieren en el meca
 | Gemini | Verificador / critic | ~30 segundos |
 | OpenCode / GLM-5.1 | Generador / arquitecto | ~2-3 minutos |
 | Ollama / qwen2.5:14b | Inferencia local / sin coste de API | variable (CPU-only) |
+| Kiro | Agente AWS / desarrollo con contexto de proyecto | ~30-60 segundos |
 
 </div>
 
@@ -167,6 +172,7 @@ cp servers/gemini_mcp.py ~/mcp-servers/
 cp servers/opencode_mcp.py ~/mcp-servers/
 cp servers/opencode-wrapper.sh ~/mcp-servers/
 cp servers/ollama_mcp.py ~/mcp-servers/
+cp servers/kiro_mcp.py ~/mcp-servers/
 chmod +x ~/mcp-servers/opencode-wrapper.sh
 ```
 
@@ -201,6 +207,7 @@ ollama list
 python3 -c "import ast; ast.parse(open('servers/gemini_mcp.py').read()); print('ok')"
 python3 -c "import ast; ast.parse(open('servers/opencode_mcp.py').read()); print('ok')"
 python3 -c "import ast; ast.parse(open('servers/ollama_mcp.py').read()); print('ok')"
+python3 -c "import ast; ast.parse(open('servers/kiro_mcp.py').read()); print('ok')"
 
 mkdir -p /tmp/gemini_test
 cd /tmp/gemini_test && gemini -y -p "Crea un fichero llamado hola.txt con el texto 'hola mundo'"
@@ -221,7 +228,8 @@ Añadir a `~/.claude/settings.json`:
     "allow": [
       "mcp__gemini__*",
       "mcp__opencode__*",
-      "mcp__ollama__*"
+      "mcp__ollama__*",
+      "mcp__kiro__*"
     ]
   }
 }
@@ -233,6 +241,7 @@ Añadir a `~/.claude/settings.json`:
 claude mcp add gemini --scope user -- python3 ~/mcp-servers/gemini_mcp.py
 claude mcp add opencode --scope user -- python3 ~/mcp-servers/opencode_mcp.py
 claude mcp add ollama --scope user -- python3 ~/mcp-servers/ollama_mcp.py
+claude mcp add kiro --scope user -- python3 ~/mcp-servers/kiro_mcp.py
 claude mcp list
 ```
 
