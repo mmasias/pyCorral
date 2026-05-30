@@ -12,7 +12,7 @@ from mcp.types import Tool, TextContent
 
 
 OLLAMA_URL = os.environ.get("CORRAL_OLLAMA_URL", "http://127.0.0.1:11434")
-DEFAULT_MODEL = os.environ.get("CORRAL_OLLAMA_MODEL", "qwen2.5:14b")
+DEFAULT_MODEL = os.environ.get("CORRAL_OLLAMA_MODEL", "qwen2.5:7b")
 DEFAULT_WORKDIR = os.path.expanduser("~/misRepos/corral/ollama")
 
 _jobs: dict[str, dict] = {}
