@@ -17,7 +17,7 @@ Las dos capas coexisten. Ninguna sustituye a la otra.
 
 ### Principio transversal
 
-Ningún estado derivable se persiste. Esto aplica a `estado_actual` del milestone (proyectado del historial de evaluaciones), al estado de promoción de un artefacto (derivado de su presencia en la lista `promovidos` de algún milestone aprobado), y a `pendiente` como estado del milestone (proyección, nunca valor almacenado). Persistir un derivado crea dos fuentes de verdad y es el origen de toda deriva.
+Ningún estado derivable se persiste. Esto aplica a `estado_actual` del milestone (proyectado del historial de evaluaciones), al estado de promoción de un artefacto (derivado del registry: aparece en `prerequisitos` por vía directa, o en `promovidos` de algún milestone aprobado por promoción desde iteración), y a `pendiente` como estado del milestone (proyección, nunca valor almacenado). Persistir un derivado crea dos fuentes de verdad y es el origen de toda deriva.
 
 ### Modelo de tres espacios
 
@@ -103,16 +103,17 @@ El caso paradigmático es el **modelo del dominio**: es condición de entrada al
 La mecánica posterior es uniforme: una vez en `rup/`, si una iteración ajusta ese artefacto (por ejemplo, el modelo del dominio cuando aparece una entidad que faltaba), el ajuste se trabaja en su slot de iteración (`corral-rup/{fase}/{iteracion}/requisitos/modelo-dominio`) y se promueve por su milestone, actualizando la versión en `rup/`. La primera versión entra por la vía 2; todos sus ajustes posteriores entran por la vía 1. A partir del primer ajuste se comporta como cualquier artefacto que evoluciona a través del tiempo.
 
 Reglas comunes a ambas vías:
-- El milestone decide *cuándo* se promueve (vía 1); la disciplina del artefacto decide *adónde* (su contenedor numerado), tanto en vía 1 como en vía 2.
+- La disciplina del artefacto decide *adónde* va en `rup/` (su contenedor numerado), tanto en vía 1 como en vía 2.
 - La copia preserva la traza: el original en `corral-rup/` (vía 1) o en su ubicación de origen (vía 2) no se elimina.
 - Un artefacto no promovido puede cruzar milestones sin promoverse y continúa como trabajo en las fases e iteraciones siguientes.
-- El estado de promoción se *deriva* de la presencia del artefacto en `rup/` (por cualquiera de las dos vías). Nunca se persiste en el artefacto.
+- El estado de promoción se *deriva* del registry, no del filesystem: un artefacto está promovido si aparece en `prerequisitos` (vía 2) o en `promovidos` de algún milestone aprobado (vía 1). Nunca se persiste en el artefacto.
+- Un prerequisito ajustado en una iteración aparece en dos sitios del registry: en `prerequisitos` (su origen) y en `promovidos` del milestone que aprobó el ajuste. Eso es traza completa, no duplicación.
 
 ### Esquema del registry
 
 Un registry por proyecto, viviendo en `corral-rup/registry.md` dentro del repo. Markdown con frontmatter YAML.
 
-- **Frontmatter YAML** — lo que el orquestador parsea: árbol de fases → iteraciones → disciplinas → artefactos, topología declarada por par iteración-disciplina, e historial de evaluaciones del milestone con su lista `promovidos`. No persistir derivados: `estado_actual`, `pendiente` y el estado de promoción de un artefacto nunca son campos del frontmatter.
+- **Frontmatter YAML** — lo que el orquestador parsea: sección `prerequisitos` (hermana de `fases`, artefactos que entran por vía directa antes del proceso), árbol de fases → iteraciones → disciplinas → artefactos, topología declarada por par iteración-disciplina, e historial de evaluaciones del milestone con su lista `promovidos`. No persistir derivados: `estado_actual`, `pendiente` y el estado de promoción de un artefacto nunca son campos del frontmatter; el estado de promoción se deriva de `prerequisitos` o de `promovidos`, nunca del filesystem.
 - **Cuerpo Markdown** — para el auditor humano: narrativa de proceso que el frontmatter no captura.
 - La topología sí se persiste: es declarada por tarea, no derivada.
 - La topología es propiedad del par iteración-disciplina. La misma disciplina puede tener topología distinta en iteraciones distintas.
@@ -122,6 +123,10 @@ Un registry por proyecto, viviendo en `corral-rup/registry.md` dentro del repo. 
 ```markdown
 ---
 proyecto: pySigHor
+prerequisitos:
+  - artefacto: modelo-dominio
+    disciplina: requisitos
+    fecha-entrada: "2026-05-01"
 fases:
   elaboracion:
     milestone:
@@ -160,6 +165,10 @@ fases:
 ---
 
 # pySigHor — Registry CORRAL-RUP
+
+## Prerequisitos
+
+`modelo-dominio` entra directo en `rup/01-requisitos/` como prerequisito del proceso. Existía antes de la primera iteración; los becarios producen casos de uso a partir de él.
 
 ## Elaboración / i1
 
