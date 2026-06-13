@@ -92,12 +92,21 @@ La puerta tiene dos posiciones: abierta (`aprobado`) o cerrada (todo lo demás).
 
 ### Promoción
 
-La aprobación de un milestone copia (no mueve) cada artefacto de su lista `promovidos`, en su última versión, al contenedor `rup/0N-disciplina/` correspondiente a la disciplina del artefacto.
+`rup/0N-disciplina/` admite dos vías de entrada, no una:
 
-- El milestone decide *cuándo* se promueve (su aprobación); la disciplina del artefacto decide *adónde* (su contenedor numerado), no la fase del milestone.
-- Es copia para preservar la traza completa de proceso en `corral-rup/`.
+**Vía 1 - Promoción desde iteración:** la aprobación de un milestone copia (no mueve) cada artefacto de su lista `promovidos`, en su última versión, al contenedor `rup/0N-disciplina/` correspondiente a la disciplina del artefacto. Es el caso general para artefactos producidos durante el proceso.
+
+**Vía 2 - Entrada directa como prerequisito:** un artefacto que existe antes de que el proceso empiece entra directamente en `rup/` sin haber pasado por una iteración ni un milestone. No se exige que todo lo que esté en `rup/` haya sido promovido. Un prerequisito puede entrar directo.
+
+El caso paradigmático es el **modelo del dominio**: es condición de entrada al proceso, no producto de una iteración, porque los becarios producen casos de uso a partir de él (la heurística CRUD parte del modelo del dominio). Si está a medias, los candidatos salen a medias. Por eso debe existir, lo más completo posible, antes de la primera iteración. También entran por esta vía otras entradas externas que preexisten al proceso: una especificación recibida, un documento normativo de referencia.
+
+La mecánica posterior es uniforme: una vez en `rup/`, si una iteración ajusta ese artefacto (por ejemplo, el modelo del dominio cuando aparece una entidad que faltaba), el ajuste se trabaja en su slot de iteración (`corral-rup/{fase}/{iteracion}/requisitos/modelo-dominio`) y se promueve por su milestone, actualizando la versión en `rup/`. La primera versión entra por la vía 2; todos sus ajustes posteriores entran por la vía 1. A partir del primer ajuste se comporta como cualquier artefacto que evoluciona a través del tiempo.
+
+Reglas comunes a ambas vías:
+- El milestone decide *cuándo* se promueve (vía 1); la disciplina del artefacto decide *adónde* (su contenedor numerado), tanto en vía 1 como en vía 2.
+- La copia preserva la traza: el original en `corral-rup/` (vía 1) o en su ubicación de origen (vía 2) no se elimina.
 - Un artefacto no promovido puede cruzar milestones sin promoverse y continúa como trabajo en las fases e iteraciones siguientes.
-- El estado de promoción se *deriva* de la presencia del artefacto en la lista `promovidos` de algún milestone aprobado. Nunca se persiste en el artefacto.
+- El estado de promoción se *deriva* de la presencia del artefacto en `rup/` (por cualquiera de las dos vías). Nunca se persiste en el artefacto.
 
 ### Esquema del registry
 
