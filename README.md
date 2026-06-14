@@ -14,8 +14,8 @@
 CORRAL convierte otros clientes LLM (Gemini, OpenCode, Ollama, Kiro…) en
 herramientas MCP que Claude Code puede usar como `bash` o `Read`:
 
-- Claude Code actúa como **orquestador*- (planifica, decide, ensambla).
-- Los agentes subordinados se limitan a **ejecutar subtareas*- y escribir ficheros.
+- Claude Code actúa como **orquestador** (planifica, decide, ensambla).
+- Los agentes subordinados se limitan a **ejecutar subtareas** y escribir ficheros.
 - Los resultados se intercambian vía **sistema de ficheros**, no por texto volátil.
 
 Casos de uso típicos:
@@ -26,7 +26,7 @@ Casos de uso típicos:
 
 ## Quickstart
 
-Objetivo: tener CORRAL funcionando con **Gemini*- en 5–10 minutos.
+Objetivo: tener CORRAL funcionando con **Gemini** en 5–10 minutos.
 
 ### 1. Requisitos mínimos
 
@@ -103,7 +103,7 @@ El sistema opera bajo una separación de responsabilidades clara:
 
 | Control Plane              | Data Plane                                  |
 |---|---|
-| **Claude Code*-           | **Gemini, OpenCode, Ollama*-                |
+| **Claude Code**           | **Gemini, OpenCode, Ollama**                |
 | Decide, planifica, delega y ensambla. Es la unidad de razonamiento. | Ejecutan subproblemas acotados, producen artefactos y terminan sin estado persistente. No saben que están siendo orquestados. |
 
 ```
