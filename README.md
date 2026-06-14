@@ -1,12 +1,95 @@
-# Claude: Orquestador de Recursos Remotos para Agentes en Loop
+# CORRAL – Orquestador multi-agente para Claude Code
 
 <div align=right>
 <sub><b>CORRAL: Claude Orchestrated Runtime for Remote Agent Loop</b><i><br>Sistema que permite que Claude Code invoque agentes LLM externos<br> como herramientas MCP durante sesiones de trabajo autónomo</i></sub>
 </div>
 
-## ¿Por qué?
+[![Python 3](https://img.shields.io/badge/Python-3.x-blue.svg)]()
+[![MCP](https://img.shields.io/badge/MCP-servers-green.svg)]()
 
 <img src="images/corral.png" width=30% align=right>
+
+## Visión rápida
+
+CORRAL convierte otros clientes LLM (Gemini, OpenCode, Ollama, Kiro…) en
+herramientas MCP que Claude Code puede usar como `bash` o `Read`:
+
+- Claude Code actúa como **orquestador** (planifica, decide, ensambla).
+- Los agentes subordinados se limitan a **ejecutar subtareas** y escribir ficheros.
+- Los resultados se intercambian vía **sistema de ficheros**, no por texto volátil.
+
+Casos de uso típicos:
+
+- Arbitraje de costes: delegar tareas baratas/rápidas a modelos pequeños.
+- Paralelizar subtareas independientes (varios agentes en paralelo).
+- Mantener control total sobre datos y costes (frente a SaaS de orquestación).
+
+---
+
+## Quickstart
+
+Objetivo: tener CORRAL funcionando con **Gemini** en 5–10 minutos.
+
+### 1. Requisitos mínimos
+
+- Claude Code instalado (`npm install -g @anthropic-ai/claude-code`)
+- Gemini CLI instalado y autenticado
+- Python 3.x con pip3 disponible
+
+(Opcional: OpenCode, Ollama, Kiro – ver sección de instalación completa.)
+
+### 2. Instalar dependencia MCP
+
+```bash
+# Debian/Ubuntu
+sudo apt install python3-pip
+pip3 install mcp --break-system-packages
+
+# Fedora
+sudo dnf install python3-pip -y
+pip3 install mcp --break-system-packages
+```
+
+### 3. Clonar y preparar los servidores
+
+```bash
+git clone https://github.com/mmasias/pyCorral
+cd pyCorral
+
+mkdir -p ~/mcp-servers
+cp servers/gemini_mcp.py ~/mcp-servers/
+```
+
+### 4. Registrar el servidor Gemini en Claude Code
+
+```bash
+claude mcp add gemini --scope user -- python3 ~/mcp-servers/gemini_mcp.py
+claude mcp list
+```
+
+### 5. Probar desde Claude Code
+
+En una sesión de Claude Code:
+
+1. `gemini_run` síncrono:
+
+   - `prompt`: `Crea un fichero llamado hola.txt con el texto "hola mundo"`
+   - `workdir`: `/tmp/corral-quickstart`
+
+2. Verificar el resultado con las herramientas de Claude:
+
+   - `Glob` en `/tmp/corral-quickstart`
+   - `Read` en `/tmp/corral-quickstart/hola.txt`
+
+Si ves el fichero, CORRAL está funcionando. A partir de aquí puedes:
+
+- Añadir OpenCode / Ollama / Kiro (ver instalación completa).
+- Probar el modo `gemini_run_async` + `gemini_done`.
+- Explorar patrones de orquestación paralela.
+
+---
+
+## ¿Por qué?
 
 En un entorno habitual de trabajo con LLMs, un usuario tiene ya instalados varios clientes CLI: Claude Code, Gemini, OpenCode u otros. Cada uno tiene sus puntos fuertes, sus modelos y sus costes. El problema es que operan en silos: no hay forma nativa de que uno invoque a otro.
 
@@ -16,89 +99,77 @@ El problema no es solo técnico. Los modelos LLM tienen costes de razonamiento d
 
 Las plataformas SaaS de orquestación ofrecen esta capacidad, pero a cambio de pérdida de control, dependencia de proveedor y envío de datos a intermediarios. Este sistema resuelve el mismo problema desde la infraestructura propia.
 
+---
+
 ## ¿Qué?
 
 ### Arquitectura: Control Plane / Data Plane
 
 El sistema opera bajo una separación de responsabilidades clara:
 
-<div align=center>
-
-|Control Plane|Data Plane|
-|-|-|
-**Claude Code**|**Gemini, OpenCode, Ollama**
-Decide, planifica, delega y ensambla. Es la unidad de razonamiento.|Ejecutan subproblemas acotados, producen artefactos y terminan sin estado persistente. No saben que están siendo orquestados.
-
-</div>
+| Control Plane              | Data Plane                                  |
+|---------------------------|---------------------------------------------|
+| **Claude Code**           | **Gemini, OpenCode, Ollama**                |
+| Decide, planifica, delega y ensambla. Es la unidad de razonamiento. | Ejecutan subproblemas acotados, producen artefactos y terminan sin estado persistente. No saben que están siendo orquestados. |
 
 ```
 Claude Code (orquestador)
-    │
-    │    
-    ├── gemini_run / gemini_run_async / gemini_done
-    │       └── gemini_mcp.py  ->  gemini CLI  ->  Google Gemini
-    │
-    │    
-    ├── opencode_run / opencode_run_async / opencode_done
-    │       └── opencode_mcp.py  ->  opencode-wrapper.sh  ->  z.ai / OpenCode
-    │
-    │        
-    ├── ollama_run / ollama_run_async / ollama_done
-    │       └── ollama_mcp.py  ->  HTTP API  ->  Ollama (local)
-    │
-    │        
-    └── kiro_run / kiro_run_async / kiro_done
-            └── kiro_mcp.py  ->  kiro-cli-chat CLI  ->  Kiro (AWS)
+│
+│
+├── gemini_run / gemini_run_async / gemini_done
+│       └── gemini_mcp.py  ->  gemini CLI  ->  Google Gemini
+│
+│
+├── opencode_run / opencode_run_async / opencode_done
+│       └── opencode_mcp.py  ->  opencode-wrapper.sh  ->  z.ai / OpenCode
+│
+│
+├── ollama_run / ollama_run_async / ollama_done
+│       └── ollama_mcp.py  ->  HTTP API  ->  Ollama (local)
+│
+│
+└── kiro_run / kiro_run_async / kiro_done
+        └── kiro_mcp.py  ->  kiro-cli-chat CLI  ->  Kiro (AWS)
 ```
 
 ### El sistema de ficheros como bus de datos
 
-- El output de cada agente son ficheros escritos en un directorio de trabajo (workdir).
-- El orquestador inspecciona los resultados con sus propias herramientas (Read, Glob, Grep).
+* El output de cada agente son ficheros escritos en un directorio de trabajo (workdir).
+* El orquestador inspecciona los resultados con sus propias herramientas (Read, Glob, Grep).
 
 Esto elimina la dependencia de flujos de texto volátiles y permite verificación determinista sobre el artefacto final.
 
 ### Modos de invocación
 
-<div align=center>
-
-| Herramienta | Modo | Comportamiento |
-|---|---|---|
-| gemini_run / opencode_run / ollama_run / kiro_run | Síncrono | Bloquea hasta terminar; escribe ficheros en workdir |
-| gemini_run_async / opencode_run_async / ollama_run_async / kiro_run_async | Async | Devuelve job_id inmediatamente |
-| gemini_done / opencode_done / ollama_done / kiro_done | Consulta | Devuelve "pendiente", "listo" o "error: ..." |
-
-</div>
+| Herramienta                                             | Modo     | Comportamiento                                                       |
+|---------------------------------------------------------|----------|----------------------------------------------------------------------|
+| gemini\_run / opencode\_run / ollama\_run / kiro\_run   | Síncrono | Bloquea hasta terminar; escribe ficheros en workdir                 |
+| gemini\_run\_async / opencode\_run\_async / ollama\_run\_async / kiro\_run\_async | Async     | Devuelve job\_id inmediatamente                                      |
+| gemini\_done / opencode\_done / ollama\_done / kiro\_done | Consulta | Devuelve "pendiente", "listo" o "error: ..."                        |
 
 Los tres servidores son estructuralmente idénticos — solo difieren en el mecanismo de invocación. Los tokens de Gemini y OpenCode se imputan a su propio proveedor; Ollama es local y no tiene coste de API.
 
 ### Limitaciones actuales
 
-<div align=center>
+| Limitación            | Descripción                                                                                 |
+|-----------------------|---------------------------------------------------------------------------------------------|
+| Persistencia volátil  | \_jobs vive en memoria del proceso MCP. Un reinicio de sesión pierde todos los job\_ids activos. |
+| Sin retry automático  | Si un agente falla a mitad de tarea, no hay rollback ni reintento.                         |
+| Sin observabilidad    | No hay logs estructurados del ciclo de vida de cada job.                                    |
+| Aislamiento por convención | La seguridad depende de que el prompt especifique un workdir adecuado.                  |
 
-| Limitación | Descripción |
-|---|---|
-| Persistencia volátil | _jobs vive en memoria del proceso MCP. Un reinicio de sesión pierde todos los job_ids activos. |
-| Sin retry automático | Si un agente falla a mitad de tarea, no hay rollback ni reintento. |
-| Sin observabilidad | No hay logs estructurados del ciclo de vida de cada job. |
-| Aislamiento por convención | La seguridad depende de que el prompt especifique un workdir adecuado. |
-
-</div>
+---
 
 ## ¿Para qué?
 
 ### Arbitraje de costos y especialización
 
-<div align=center>
-
-| Agente | Rol | Velocidad |
-|---|---|---|
-| Gemini | Verificador / critic | ~30 segundos |
-| OpenCode / GLM-5.1 | Generador / arquitecto | ~2-3 minutos |
-| Ollama / qwen2.5:14b | Inferencia local / sin coste de API | variable (CPU-only) |
-| Kiro | Agente AWS / desarrollo con contexto de proyecto | ~30-60 segundos |
-
-</div>
+| Agente              | Rol                           | Velocidad          |
+|---------------------|-------------------------------|--------------------|
+| Gemini              | Verificador / critic          | ~30 segundos       |
+| OpenCode / GLM-5.1  | Generador / arquitecto        | ~2-3 minutos       |
+| Ollama / qwen2.5:14b| Inferencia local / sin coste de API | variable (CPU-only) |
+| Kiro                | Agente AWS / desarrollo con contexto de proyecto | ~30-60 segundos |
 
 ### Paralelismo real
 
@@ -125,25 +196,27 @@ Frente a plataformas SaaS: la ventaja es control total. La contrapartida es real
 
 </div>
 
-## ¿Cómo?
+## Instalación y configuración completa
 
 ### Requisitos previos
 
-- Claude Code instalado (`npm install -g @anthropic-ai/claude-code`)
-- gemini CLI instalado y autenticado
-- opencode CLI instalado y autenticado con z.ai (v1.14+ para modo no-interactivo)
-- Python 3.x con pip3 disponible
-- Ollama instalado y ejecutándose (`ollama serve`) — opcional, solo para el agente local
+* Claude Code instalado (`npm install -g @anthropic-ai/claude-code`)
+* gemini CLI instalado y autenticado
+* opencode CLI instalado y autenticado con z.ai (v1.14+ para modo no-interactivo)
+* Python 3.x con pip3 disponible
+* Ollama instalado y ejecutándose (`ollama serve`) — opcional, solo para el agente local
 
 ### 1. Instalar dependencia Python
 
 Debian/Ubuntu:
+
 ```bash
 sudo apt install python3-pip
 pip3 install mcp --break-system-packages
 ```
 
 Fedora:
+
 ```bash
 sudo dnf install python3-pip -y
 pip3 install mcp --break-system-packages
@@ -179,6 +252,7 @@ chmod +x ~/mcp-servers/opencode-wrapper.sh
 ### 5. Configurar el modelo de OpenCode
 
 Añadir a `~/.bashrc` o `~/.zshrc`:
+
 ```bash
 export CORRAL_OPENCODE_MODEL="zai-coding-plan/glm-5.1"  # sustituir por el modelo detectado
 ```
@@ -186,17 +260,20 @@ export CORRAL_OPENCODE_MODEL="zai-coding-plan/glm-5.1"  # sustituir por el model
 ### Configurar Ollama (opcional)
 
 Verificar que Ollama está corriendo:
+
 ```bash
 curl http://127.0.0.1:11434/api/tags
 ```
 
 Para usar un modelo distinto al default (`qwen2.5:14b`), añadir a `~/.bashrc` o `~/.zshrc`:
+
 ```bash
 export CORRAL_OLLAMA_MODEL="nombre-del-modelo"
 export CORRAL_OLLAMA_URL="http://127.0.0.1:11434"  # si escucha en otro puerto
 ```
 
 Modelos disponibles:
+
 ```bash
 ollama list
 ```
@@ -222,6 +299,7 @@ ls /tmp/opencode_test/
 ### 7. Configurar permisos para modo autónomo
 
 Añadir a `~/.claude/settings.json`:
+
 ```json
 {
   "permissions": {
@@ -248,15 +326,18 @@ claude mcp list
 ### 9. Verificar desde Claude Code
 
 Prueba 1 - OpenCode sync: `opencode_run` con workdir `/tmp/octest`, crear `hola.txt`
+
 Prueba 2 - Gemini sync: `gemini_run` con workdir `/tmp/gtest`, crear `resumen.md`
+
 Prueba 3 - Ollama sync: `ollama_run` con workdir `/tmp/oltest`, crear `resumen.md`
+
 Prueba 4 - async: `opencode_run_async`, anotar `job_id`, recoger con `opencode_done`
 
 ### Patrón de orquestación paralela
 
 Regla fundamental: nunca enviar a dos agentes a escribir el mismo fichero en paralelo.
 
-```bash
+```python
 # 1. Claude crea estructura con placeholders
 # 2. Delegar en paralelo
 job_g = gemini_run_async(prompt="...", workdir="/tmp/webtest")
@@ -268,20 +349,25 @@ opencode_done(job_o)
 # 5. Ensamblar
 ```
 
+---
+
 ## Diagnóstico de problemas frecuentes
 
 ### Failed to connect en claude mcp list
+
 ```bash
 python3 ~/mcp-servers/gemini_mcp.py
 # Si se queda colgado: correcto. Si muestra error: corregir.
 ```
 
-### Timeout en gemini_run o opencode_run
-- PATH incorrecto: los scripts usan detección automática, pero verificar con `which gemini`
-- Modelo no disponible: verificar con `opencode models`
-- opencode no autenticado: ejecutar opencode en TUI
+### Timeout en gemini\_run o opencode\_run
+
+* PATH incorrecto: los scripts usan detección automática, pero verificar con `which gemini`
+* Modelo no disponible: verificar con `opencode models`
+* opencode no autenticado: ejecutar opencode en TUI
 
 ### OpenCode no crea ficheros en workdir
+
 ```bash
 chmod +x ~/mcp-servers/opencode-wrapper.sh
 mkdir -p /tmp/oc_test
@@ -290,41 +376,47 @@ cd /tmp/oc_test && ~/mcp-servers/opencode-wrapper.sh /tmp/test_prompt.txt
 ls /tmp/oc_test/
 ```
 
-### error: job_id no encontrado
+### error: job\_id no encontrado
+
 `_jobs` es efímero. Lanzar y recoger en la misma sesión de Claude Code.
 
-### _done cuelga indefinidamente
+### \_done cuelga indefinidamente
+
 Causa: stdin heredado. Solución: `stdin=DEVNULL` en todos los `Popen`/`subprocess.run`. Ya está en los scripts.
 
-### _done devuelve pendiente indefinidamente
+### \_done devuelve pendiente indefinidamente
+
 ```bash
 ps aux | grep gemini
 ps aux | grep opencode
 ```
 
 ### Ollama no responde
+
 ```bash
 curl http://127.0.0.1:11434/api/tags
 ```
+
 Si falla: `ollama serve` en otra terminal.
 
 ### Ollama: modelo no encontrado
+
 ```bash
 ollama list
 ```
+
 Si falta el modelo: `ollama pull qwen2.5:14b`
 
 ### Ollama: respuesta muy lenta
+
 Es CPU-only — los modelos grandes (14B) son lentos en hardware sin GPU. Opciones:
-- Usar un modelo más pequeño: `export CORRAL_OLLAMA_MODEL="qwen2.5:7b"`
-- Aceptar la latencia para tareas que no sean time-sensitive
 
+* Usar un modelo más pequeño: `export CORRAL_OLLAMA_MODEL="qwen2.5:7b"`
+* Aceptar la latencia para tareas que no sean time-sensitive
 
-## Experimentos
+---
 
-- [Prueba 001 — Evaluación del nombre CORRAL](docs/prueba001.md)
-
-## Y ahora qué
+## Extensiones y ecosistema
 
 ### Incorporar nuevos agentes
 
@@ -335,6 +427,12 @@ Es CPU-only — los modelos grandes (14B) son lentos en hardware sin GPU. Opcion
 
 ### CORRAL + myClaudeContext
 
-CORRAL funciona de forma autónoma, pero combinado con [myClaudeContext](https://github.com/mmasias/myClaudeContext-template) la ecuación se completa: myClaudeContext aporta memoria persistente y contexto sincronizado entre máquinas; CORRAL aporta la invocación en tiempo real de agentes subordinados.
+CORRAL funciona de forma autónoma, pero combinado con myClaudeContext la ecuación se completa: myClaudeContext aporta memoria persistente y contexto sincronizado entre máquinas; CORRAL aporta la invocación en tiempo real de agentes subordinados.
 
 El contexto fluye por convención de ficheros: Gemini CLI carga `~/.gemini/GEMINI.md` como contexto global y el `GEMINI.md` del directorio de trabajo como contexto de proyecto. Si esos ficheros están sincronizados entre máquinas mediante myClaudeContext, cada agente subordinado opera con el mismo conocimiento de base que el orquestador, sin configuración adicional. El `workdir` que CORRAL pasa a cada agente actúa como frontera natural: arrancas Claude Code desde el directorio que te interesa, y ese scope se propaga automáticamente a los agentes delegados.
+
+---
+
+## About
+
+Claude: Orquestador de Recursos Remotos para Agentes en Loop / Claude Orchestrated Runtime for Remote Agent Loop
