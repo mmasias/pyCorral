@@ -14,8 +14,8 @@
 CORRAL convierte otros clientes LLM (Gemini, OpenCode, Ollama, Kiro…) en
 herramientas MCP que Claude Code puede usar como `bash` o `Read`:
 
-- Claude Code actúa como **orquestador** (planifica, decide, ensambla).
-- Los agentes subordinados se limitan a **ejecutar subtareas** y escribir ficheros.
+- Claude Code actúa como **orquestador*- (planifica, decide, ensambla).
+- Los agentes subordinados se limitan a **ejecutar subtareas*- y escribir ficheros.
 - Los resultados se intercambian vía **sistema de ficheros**, no por texto volátil.
 
 Casos de uso típicos:
@@ -28,7 +28,7 @@ Casos de uso típicos:
 
 ## Quickstart
 
-Objetivo: tener CORRAL funcionando con **Gemini** en 5–10 minutos.
+Objetivo: tener CORRAL funcionando con **Gemini*- en 5–10 minutos.
 
 ### 1. Requisitos mínimos
 
@@ -109,7 +109,7 @@ El sistema opera bajo una separación de responsabilidades clara:
 
 | Control Plane              | Data Plane                                  |
 |---------------------------|---------------------------------------------|
-| **Claude Code**           | **Gemini, OpenCode, Ollama**                |
+| **Claude Code*-           | **Gemini, OpenCode, Ollama*-                |
 | Decide, planifica, delega y ensambla. Es la unidad de razonamiento. | Ejecutan subproblemas acotados, producen artefactos y terminan sin estado persistente. No saben que están siendo orquestados. |
 
 ```
@@ -134,8 +134,8 @@ Claude Code (orquestador)
 
 ### El sistema de ficheros como bus de datos
 
-* El output de cada agente son ficheros escritos en un directorio de trabajo (workdir).
-* El orquestador inspecciona los resultados con sus propias herramientas (Read, Glob, Grep).
+- El output de cada agente son ficheros escritos en un directorio de trabajo (workdir).
+- El orquestador inspecciona los resultados con sus propias herramientas (Read, Glob, Grep).
 
 Esto elimina la dependencia de flujos de texto volátiles y permite verificación determinista sobre el artefacto final.
 
@@ -187,12 +187,12 @@ Frente a plataformas SaaS: la ventaja es control total. La contrapartida es real
 
 | Alternativa | Sí | Pero | Y entonces CORRAL… |
 |---|---|---|---|
-| **[LangChain](https://www.langchain.com/)** | Muy madura, gran ecosistema | Abstracción excesiva, difícil de depurar, tus datos pasan por su stack | CORRAL es transparente: cada llamada es un proceso que puedes inspeccionar, matar o redirigir desde el terminal |
-| **[LlamaIndex](https://www.llamaindex.ai/)** | Excelente para RAG y contexto documental | No es orquestación multi-agente real | CORRAL orquesta agentes heterogéneos con modelos y proveedores distintos, no documentos |
-| **[CrewAI](https://www.crewai.com/)** | Multi-agente con roles, fácil de arrancar | Los agentes no son CLIs reales, todo ocurre dentro del mismo proceso Python | CORRAL usa CLIs reales con sus propios modelos y costes imputados a sus proveedores, no a uno solo |
-| **[AutoGen](https://microsoft.github.io/autogen/)** | Conversación entre agentes sofisticada | Complejo, opinionado, difícil de controlar el flujo | CORRAL delega el criterio al orquestador (Claude Code), no a un framework |
-| **[n8n](https://n8n.io/) / [Make](https://www.make.com/)** | Visual, rápido para flujos simples | Ejecuta recetas fijas, sin razonamiento | CORRAL no ejecuta un flujo predefinido: Claude Code decide en tiempo real qué delegar, a quién y cuándo recoger |
-| **[Dify](https://dify.ai/) / [Flowise](https://flowiseai.com/)** | GUI, cero código | Tus datos en servidores ajenos, sin control real | CORRAL corre en tu máquina, tus tokens van directo a cada proveedor, sin intermediarios |
+| **[LangChain](https://www.langchain.com/)*- | Muy madura, gran ecosistema | Abstracción excesiva, difícil de depurar, tus datos pasan por su stack | CORRAL es transparente: cada llamada es un proceso que puedes inspeccionar, matar o redirigir desde el terminal |
+| **[LlamaIndex](https://www.llamaindex.ai/)*- | Excelente para RAG y contexto documental | No es orquestación multi-agente real | CORRAL orquesta agentes heterogéneos con modelos y proveedores distintos, no documentos |
+| **[CrewAI](https://www.crewai.com/)*- | Multi-agente con roles, fácil de arrancar | Los agentes no son CLIs reales, todo ocurre dentro del mismo proceso Python | CORRAL usa CLIs reales con sus propios modelos y costes imputados a sus proveedores, no a uno solo |
+| **[AutoGen](https://microsoft.github.io/autogen/)*- | Conversación entre agentes sofisticada | Complejo, opinionado, difícil de controlar el flujo | CORRAL delega el criterio al orquestador (Claude Code), no a un framework |
+| **[n8n](https://n8n.io/) / [Make](https://www.make.com/)*- | Visual, rápido para flujos simples | Ejecuta recetas fijas, sin razonamiento | CORRAL no ejecuta un flujo predefinido: Claude Code decide en tiempo real qué delegar, a quién y cuándo recoger |
+| **[Dify](https://dify.ai/) / [Flowise](https://flowiseai.com/)*- | GUI, cero código | Tus datos en servidores ajenos, sin control real | CORRAL corre en tu máquina, tus tokens van directo a cada proveedor, sin intermediarios |
 
 </div>
 
@@ -200,11 +200,11 @@ Frente a plataformas SaaS: la ventaja es control total. La contrapartida es real
 
 ### Requisitos previos
 
-* Claude Code instalado (`npm install -g @anthropic-ai/claude-code`)
-* gemini CLI instalado y autenticado
-* opencode CLI instalado y autenticado con z.ai (v1.14+ para modo no-interactivo)
-* Python 3.x con pip3 disponible
-* Ollama instalado y ejecutándose (`ollama serve`) — opcional, solo para el agente local
+- Claude Code instalado (`npm install -g @anthropic-ai/claude-code`)
+- gemini CLI instalado y autenticado
+- opencode CLI instalado y autenticado con z.ai (v1.14+ para modo no-interactivo)
+- Python 3.x con pip3 disponible
+- Ollama instalado y ejecutándose (`ollama serve`) — opcional, solo para el agente local
 
 ### 1. Instalar dependencia Python
 
@@ -362,9 +362,9 @@ python3 ~/mcp-servers/gemini_mcp.py
 
 ### Timeout en gemini\_run o opencode\_run
 
-* PATH incorrecto: los scripts usan detección automática, pero verificar con `which gemini`
-* Modelo no disponible: verificar con `opencode models`
-* opencode no autenticado: ejecutar opencode en TUI
+- PATH incorrecto: los scripts usan detección automática, pero verificar con `which gemini`
+- Modelo no disponible: verificar con `opencode models`
+- opencode no autenticado: ejecutar opencode en TUI
 
 ### OpenCode no crea ficheros en workdir
 
@@ -411,8 +411,14 @@ Si falta el modelo: `ollama pull qwen2.5:14b`
 
 Es CPU-only — los modelos grandes (14B) son lentos en hardware sin GPU. Opciones:
 
-* Usar un modelo más pequeño: `export CORRAL_OLLAMA_MODEL="qwen2.5:7b"`
-* Aceptar la latencia para tareas que no sean time-sensitive
+- Usar un modelo más pequeño: `export CORRAL_OLLAMA_MODEL="qwen2.5:7b"`
+- Aceptar la latencia para tareas que no sean time-sensitive
+
+---
+
+## Experimentos
+
+- [Prueba 001 — Evaluación del nombre CORRAL](docs/prueba001.md)
 
 ---
 
@@ -420,14 +426,14 @@ Es CPU-only — los modelos grandes (14B) son lentos en hardware sin GPU. Opcion
 
 ### Incorporar nuevos agentes
 
-* **Paso 1**: verificar modo no-interactivo del CLI
-* **Paso 2**: verificar comportamiento de stdout
-* **Paso 3**: copiar `gemini_mcp.py` como plantilla, cambiar nombre de servidor, herramientas y comando
-* **Paso 4**: registrar con `claude mcp add` y añadir permiso en `settings.json`
+- **Paso 1**: verificar modo no-interactivo del CLI
+- **Paso 2**: verificar comportamiento de stdout
+- **Paso 3**: copiar `gemini_mcp.py` como plantilla, cambiar nombre de servidor, herramientas y comando
+- **Paso 4**: registrar con `claude mcp add` y añadir permiso en `settings.json`
 
 ### CORRAL + myClaudeContext
 
-CORRAL funciona de forma autónoma, pero combinado con myClaudeContext la ecuación se completa: myClaudeContext aporta memoria persistente y contexto sincronizado entre máquinas; CORRAL aporta la invocación en tiempo real de agentes subordinados.
+CORRAL funciona de forma autónoma, pero combinado con [myClaudeContext](https://github.com/mmasias/myClaudeContext-template) la ecuación se completa: myClaudeContext aporta memoria persistente y contexto sincronizado entre máquinas; CORRAL aporta la invocación en tiempo real de agentes subordinados.
 
 El contexto fluye por convención de ficheros: Gemini CLI carga `~/.gemini/GEMINI.md` como contexto global y el `GEMINI.md` del directorio de trabajo como contexto de proyecto. Si esos ficheros están sincronizados entre máquinas mediante myClaudeContext, cada agente subordinado opera con el mismo conocimiento de base que el orquestador, sin configuración adicional. El `workdir` que CORRAL pasa a cada agente actúa como frontera natural: arrancas Claude Code desde el directorio que te interesa, y ese scope se propaga automáticamente a los agentes delegados.
 
