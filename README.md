@@ -24,8 +24,6 @@ Casos de uso típicos:
 - Paralelizar subtareas independientes (varios agentes en paralelo).
 - Mantener control total sobre datos y costes (frente a SaaS de orquestación).
 
----
-
 ## Quickstart
 
 Objetivo: tener CORRAL funcionando con **Gemini*- en 5–10 minutos.
@@ -87,8 +85,6 @@ Si ves el fichero, CORRAL está funcionando. A partir de aquí puedes:
 - Probar el modo `gemini_run_async` + `gemini_done`.
 - Explorar patrones de orquestación paralela.
 
----
-
 ## ¿Por qué?
 
 En un entorno habitual de trabajo con LLMs, un usuario tiene ya instalados varios clientes CLI: Claude Code, Gemini, OpenCode u otros. Cada uno tiene sus puntos fuertes, sus modelos y sus costes. El problema es que operan en silos: no hay forma nativa de que uno invoque a otro.
@@ -99,8 +95,6 @@ El problema no es solo técnico. Los modelos LLM tienen costes de razonamiento d
 
 Las plataformas SaaS de orquestación ofrecen esta capacidad, pero a cambio de pérdida de control, dependencia de proveedor y envío de datos a intermediarios. Este sistema resuelve el mismo problema desde la infraestructura propia.
 
----
-
 ## ¿Qué?
 
 ### Arquitectura: Control Plane / Data Plane
@@ -108,7 +102,7 @@ Las plataformas SaaS de orquestación ofrecen esta capacidad, pero a cambio de p
 El sistema opera bajo una separación de responsabilidades clara:
 
 | Control Plane              | Data Plane                                  |
-|---------------------------|---------------------------------------------|
+|---|---|
 | **Claude Code*-           | **Gemini, OpenCode, Ollama*-                |
 | Decide, planifica, delega y ensambla. Es la unidad de razonamiento. | Ejecutan subproblemas acotados, producen artefactos y terminan sin estado persistente. No saben que están siendo orquestados. |
 
@@ -142,7 +136,7 @@ Esto elimina la dependencia de flujos de texto volátiles y permite verificació
 ### Modos de invocación
 
 | Herramienta                                             | Modo     | Comportamiento                                                       |
-|---------------------------------------------------------|----------|----------------------------------------------------------------------|
+|---|---|---|
 | gemini\_run / opencode\_run / ollama\_run / kiro\_run   | Síncrono | Bloquea hasta terminar; escribe ficheros en workdir                 |
 | gemini\_run\_async / opencode\_run\_async / ollama\_run\_async / kiro\_run\_async | Async     | Devuelve job\_id inmediatamente                                      |
 | gemini\_done / opencode\_done / ollama\_done / kiro\_done | Consulta | Devuelve "pendiente", "listo" o "error: ..."                        |
@@ -152,20 +146,18 @@ Los tres servidores son estructuralmente idénticos — solo difieren en el meca
 ### Limitaciones actuales
 
 | Limitación            | Descripción                                                                                 |
-|-----------------------|---------------------------------------------------------------------------------------------|
+|---|---|
 | Persistencia volátil  | \_jobs vive en memoria del proceso MCP. Un reinicio de sesión pierde todos los job\_ids activos. |
 | Sin retry automático  | Si un agente falla a mitad de tarea, no hay rollback ni reintento.                         |
 | Sin observabilidad    | No hay logs estructurados del ciclo de vida de cada job.                                    |
 | Aislamiento por convención | La seguridad depende de que el prompt especifique un workdir adecuado.                  |
-
----
 
 ## ¿Para qué?
 
 ### Arbitraje de costos y especialización
 
 | Agente              | Rol                           | Velocidad          |
-|---------------------|-------------------------------|--------------------|
+|---|---|---|
 | Gemini              | Verificador / critic          | ~30 segundos       |
 | OpenCode / GLM-5.1  | Generador / arquitecto        | ~2-3 minutos       |
 | Ollama / qwen2.5:14b| Inferencia local / sin coste de API | variable (CPU-only) |
@@ -189,7 +181,7 @@ Frente a plataformas SaaS: la ventaja es control total. La contrapartida es real
 |---|---|---|---|
 | **[LangChain](https://www.langchain.com/)** | Muy madura, gran ecosistema | Abstracción excesiva, difícil de depurar, tus datos pasan por su stack | CORRAL es transparente: cada llamada es un proceso que puedes inspeccionar, matar o redirigir desde el terminal |
 | **[LlamaIndex](https://www.llamaindex.ai/)** | Excelente para RAG y contexto documental | No es orquestación multi-agente real | CORRAL orquesta agentes heterogéneos con modelos y proveedores distintos, no documentos |
-| **[CrewAI](https://www.crewai.com/)*- | Multi-agente con roles, fácil de arrancar | Los agentes no son CLIs reales, todo ocurre dentro del mismo proceso Python | CORRAL usa CLIs reales con sus propios modelos y costes imputados a sus proveedores, no a uno solo |
+| **[CrewAI](https://www.crewai.com/)** | Multi-agente con roles, fácil de arrancar | Los agentes no son CLIs reales, todo ocurre dentro del mismo proceso Python | CORRAL usa CLIs reales con sus propios modelos y costes imputados a sus proveedores, no a uno solo |
 | **[AutoGen](https://microsoft.github.io/autogen/)** | Conversación entre agentes sofisticada | Complejo, opinionado, difícil de controlar el flujo | CORRAL delega el criterio al orquestador (Claude Code), no a un framework |
 | **[n8n](https://n8n.io/) / [Make](https://www.make.com/)** | Visual, rápido para flujos simples | Ejecuta recetas fijas, sin razonamiento | CORRAL no ejecuta un flujo predefinido: Claude Code decide en tiempo real qué delegar, a quién y cuándo recoger |
 | **[Dify](https://dify.ai/) / [Flowise](https://flowiseai.com/)** | GUI, cero código | Tus datos en servidores ajenos, sin control real | CORRAL corre en tu máquina, tus tokens van directo a cada proveedor, sin intermediarios |
@@ -349,8 +341,6 @@ opencode_done(job_o)
 # 5. Ensamblar
 ```
 
----
-
 ## Diagnóstico de problemas frecuentes
 
 ### Failed to connect en claude mcp list
@@ -414,13 +404,9 @@ Es CPU-only — los modelos grandes (14B) son lentos en hardware sin GPU. Opcion
 - Usar un modelo más pequeño: `export CORRAL_OLLAMA_MODEL="qwen2.5:7b"`
 - Aceptar la latencia para tareas que no sean time-sensitive
 
----
-
 ## Experimentos
 
 - [Prueba 001 — Evaluación del nombre CORRAL](docs/prueba001.md)
-
----
 
 ## Extensiones y ecosistema
 
@@ -436,8 +422,6 @@ Es CPU-only — los modelos grandes (14B) son lentos en hardware sin GPU. Opcion
 CORRAL funciona de forma autónoma, pero combinado con [myClaudeContext](https://github.com/mmasias/myClaudeContext-template) la ecuación se completa: myClaudeContext aporta memoria persistente y contexto sincronizado entre máquinas; CORRAL aporta la invocación en tiempo real de agentes subordinados.
 
 El contexto fluye por convención de ficheros: Gemini CLI carga `~/.gemini/GEMINI.md` como contexto global y el `GEMINI.md` del directorio de trabajo como contexto de proyecto. Si esos ficheros están sincronizados entre máquinas mediante myClaudeContext, cada agente subordinado opera con el mismo conocimiento de base que el orquestador, sin configuración adicional. El `workdir` que CORRAL pasa a cada agente actúa como frontera natural: arrancas Claude Code desde el directorio que te interesa, y ese scope se propaga automáticamente a los agentes delegados.
-
----
 
 ## About
 
