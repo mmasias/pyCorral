@@ -187,12 +187,12 @@ Frente a plataformas SaaS: la ventaja es control total. La contrapartida es real
 
 | Alternativa | Sí | Pero | Y entonces CORRAL… |
 |---|---|---|---|
-| **[LangChain](https://www.langchain.com/)*- | Muy madura, gran ecosistema | Abstracción excesiva, difícil de depurar, tus datos pasan por su stack | CORRAL es transparente: cada llamada es un proceso que puedes inspeccionar, matar o redirigir desde el terminal |
-| **[LlamaIndex](https://www.llamaindex.ai/)*- | Excelente para RAG y contexto documental | No es orquestación multi-agente real | CORRAL orquesta agentes heterogéneos con modelos y proveedores distintos, no documentos |
+| **[LangChain](https://www.langchain.com/)** | Muy madura, gran ecosistema | Abstracción excesiva, difícil de depurar, tus datos pasan por su stack | CORRAL es transparente: cada llamada es un proceso que puedes inspeccionar, matar o redirigir desde el terminal |
+| **[LlamaIndex](https://www.llamaindex.ai/)** | Excelente para RAG y contexto documental | No es orquestación multi-agente real | CORRAL orquesta agentes heterogéneos con modelos y proveedores distintos, no documentos |
 | **[CrewAI](https://www.crewai.com/)*- | Multi-agente con roles, fácil de arrancar | Los agentes no son CLIs reales, todo ocurre dentro del mismo proceso Python | CORRAL usa CLIs reales con sus propios modelos y costes imputados a sus proveedores, no a uno solo |
-| **[AutoGen](https://microsoft.github.io/autogen/)*- | Conversación entre agentes sofisticada | Complejo, opinionado, difícil de controlar el flujo | CORRAL delega el criterio al orquestador (Claude Code), no a un framework |
-| **[n8n](https://n8n.io/) / [Make](https://www.make.com/)*- | Visual, rápido para flujos simples | Ejecuta recetas fijas, sin razonamiento | CORRAL no ejecuta un flujo predefinido: Claude Code decide en tiempo real qué delegar, a quién y cuándo recoger |
-| **[Dify](https://dify.ai/) / [Flowise](https://flowiseai.com/)*- | GUI, cero código | Tus datos en servidores ajenos, sin control real | CORRAL corre en tu máquina, tus tokens van directo a cada proveedor, sin intermediarios |
+| **[AutoGen](https://microsoft.github.io/autogen/)** | Conversación entre agentes sofisticada | Complejo, opinionado, difícil de controlar el flujo | CORRAL delega el criterio al orquestador (Claude Code), no a un framework |
+| **[n8n](https://n8n.io/) / [Make](https://www.make.com/)** | Visual, rápido para flujos simples | Ejecuta recetas fijas, sin razonamiento | CORRAL no ejecuta un flujo predefinido: Claude Code decide en tiempo real qué delegar, a quién y cuándo recoger |
+| **[Dify](https://dify.ai/) / [Flowise](https://flowiseai.com/)** | GUI, cero código | Tus datos en servidores ajenos, sin control real | CORRAL corre en tu máquina, tus tokens van directo a cada proveedor, sin intermediarios |
 
 </div>
 
