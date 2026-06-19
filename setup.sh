@@ -72,6 +72,7 @@ mkdir -p ~/misRepos/corral/gemini \
 
 # 5. Copiar scripts
 echo "[5/10] Copiando scripts desde servers/..."
+cp servers/base.py ~/mcp-servers/
 cp servers/gemini_mcp.py ~/mcp-servers/
 cp servers/opencode_mcp.py ~/mcp-servers/
 cp servers/opencode-wrapper.sh ~/mcp-servers/
