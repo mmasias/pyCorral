@@ -9,21 +9,92 @@ from base import BaseAgentMCP, run
 OLLAMA_URL = os.environ.get("CORRAL_OLLAMA_URL", "http://127.0.0.1:11434")
 DEFAULT_MODEL = os.environ.get("CORRAL_OLLAMA_MODEL", "qwen2.5:7b")
 
+_TOOLS = [
+    {
+        "type": "function",
+        "function": {
+            "name": "write_file",
+            "description": "Escribe contenido en un archivo dentro del directorio de trabajo",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "filename": {"type": "string", "description": "Nombre del archivo (relativo al workdir)"},
+                    "content": {"type": "string", "description": "Contenido a escribir"},
+                },
+                "required": ["filename", "content"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "read_file",
+            "description": "Lee el contenido de un archivo del directorio de trabajo",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "filename": {"type": "string", "description": "Nombre del archivo (relativo al workdir)"},
+                },
+                "required": ["filename"],
+            },
+        },
+    },
+]
 
-def _call_ollama(prompt: str, model: str, timeout: int = 600) -> str:
-    payload = json.dumps({
-        "model": model,
-        "prompt": prompt,
-        "stream": False,
-    }).encode()
-    req = urllib.request.Request(
-        f"{OLLAMA_URL}/api/generate",
-        data=payload,
-        headers={"Content-Type": "application/json"},
-    )
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        data = json.loads(resp.read())
-    return data["response"]
+
+def _execute_tool(name: str, args: dict, workdir: str) -> str:
+    if name == "write_file":
+        path = os.path.join(workdir, args["filename"])
+        parent = os.path.dirname(path)
+        if parent:
+            os.makedirs(parent, exist_ok=True)
+        with open(path, "w") as f:
+            f.write(args["content"])
+        return f"ok: '{args['filename']}' escrito."
+    if name == "read_file":
+        path = os.path.join(workdir, args["filename"])
+        try:
+            with open(path) as f:
+                return f.read()
+        except FileNotFoundError:
+            return f"error: '{args['filename']}' no existe."
+    return f"error: herramienta '{name}' desconocida."
+
+
+def _call_ollama(prompt: str, model: str, workdir: str, timeout: int = 600) -> str:
+    messages = [{"role": "user", "content": prompt}]
+
+    for _ in range(10):
+        payload = json.dumps({
+            "model": model,
+            "messages": messages,
+            "tools": _TOOLS,
+            "stream": False,
+        }).encode()
+        req = urllib.request.Request(
+            f"{OLLAMA_URL}/api/chat",
+            data=payload,
+            headers={"Content-Type": "application/json"},
+        )
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            data = json.loads(resp.read())
+
+        message = data["message"]
+        messages.append(message)
+
+        tool_calls = message.get("tool_calls")
+        if not tool_calls:
+            return message.get("content", "")
+
+        for tc in tool_calls:
+            fn = tc["function"]
+            args = fn.get("arguments", {})
+            if isinstance(args, str):
+                args = json.loads(args)
+            result = _execute_tool(fn["name"], args, workdir)
+            messages.append({"role": "tool", "content": result})
+
+    return "error: límite de iteraciones alcanzado."
 
 
 class OllamaMCP(BaseAgentMCP):
@@ -52,7 +123,7 @@ class OllamaMCP(BaseAgentMCP):
     def _invoke_sync(self, prompt: str, workdir: str, **kwargs) -> str:
         model = kwargs.get("model", DEFAULT_MODEL)
         try:
-            response = _call_ollama(prompt, model)
+            response = _call_ollama(prompt, model, workdir)
             with open(os.path.join(workdir, "output.md"), "w") as f:
                 f.write(response)
             return "ok"
@@ -65,7 +136,7 @@ class OllamaMCP(BaseAgentMCP):
 
         def worker():
             try:
-                response = _call_ollama(prompt, model, timeout=None)
+                response = _call_ollama(prompt, model, workdir, timeout=None)
                 with open(os.path.join(workdir, "output.md"), "w") as f:
                     f.write(response)
                 self._jobs[job_id]["result"] = "listo"

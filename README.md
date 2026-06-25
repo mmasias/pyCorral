@@ -160,7 +160,7 @@ Los tres servidores son estructuralmente idénticos — solo difieren en el meca
 |---|---|---|
 | Gemini              | Verificador / critic          | ~30 segundos       |
 | OpenCode / GLM-5.1  | Generador / arquitecto        | ~2-3 minutos       |
-| Ollama / qwen2.5:14b| Inferencia local / sin coste de API | variable (CPU-only) |
+| Ollama / qwen2.5:7b | Inferencia local con function calling / sin coste de API | variable (CPU-only) |
 | Kiro                | Agente AWS / desarrollo con contexto de proyecto | ~30-60 segundos |
 
 ### Paralelismo real
@@ -257,12 +257,14 @@ Verificar que Ollama está corriendo:
 curl http://127.0.0.1:11434/api/tags
 ```
 
-Para usar un modelo distinto al default (`qwen2.5:14b`), añadir a `~/.bashrc` o `~/.zshrc`:
+Para usar un modelo distinto al default (`qwen2.5:7b`), añadir a `~/.bashrc` o `~/.zshrc`:
 
 ```bash
 export CORRAL_OLLAMA_MODEL="nombre-del-modelo"
 export CORRAL_OLLAMA_URL="http://127.0.0.1:11434"  # si escucha en otro puerto
 ```
+
+El servidor usa function calling (endpoint `/api/chat` con tools). El modelo debe soportar tool use — `qwen2.5` (cualquier tamaño), `llama3.1` y `mistral-nemo` son opciones probadas.
 
 Modelos disponibles:
 
@@ -399,9 +401,9 @@ Si falta el modelo: `ollama pull qwen2.5:14b`
 
 ### Ollama: respuesta muy lenta
 
-Es CPU-only — los modelos grandes (14B) son lentos en hardware sin GPU. Opciones:
+Es CPU-only — los modelos grandes son lentos en hardware sin GPU. Opciones:
 
-- Usar un modelo más pequeño: `export CORRAL_OLLAMA_MODEL="qwen2.5:7b"`
+- Usar el modelo default `qwen2.5:7b` (equilibrio velocidad/capacidad)
 - Aceptar la latencia para tareas que no sean time-sensitive
 
 ## Experimentos
