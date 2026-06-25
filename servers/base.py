@@ -65,14 +65,14 @@ class BaseAgentMCP(ABC):
     async def _call_tool(self, name: str, arguments: dict):
         n = self.agent_name
         if name == f"{n}_run":
-            workdir = arguments.get("workdir", self.default_workdir)
+            workdir = os.path.expanduser(arguments.get("workdir", self.default_workdir))
             os.makedirs(workdir, exist_ok=True)
             text = self._invoke_sync(arguments["prompt"], workdir, **self._extra_args(arguments))
             return [TextContent(type="text", text=text)]
 
         if name == f"{n}_run_async":
             job_id = uuid.uuid4().hex[:8]
-            workdir = arguments.get("workdir", self.default_workdir)
+            workdir = os.path.expanduser(arguments.get("workdir", self.default_workdir))
             os.makedirs(workdir, exist_ok=True)
             self._invoke_async(job_id, arguments["prompt"], workdir, **self._extra_args(arguments))
             return [TextContent(type="text", text=job_id)]
