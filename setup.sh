@@ -8,7 +8,7 @@ set -e
 echo "--- pyCorral Setup ---"
 
 # 1. Verificar dependencias básicas
-echo "[1/10] Verificando Python 3 y pip3..."
+echo "[1/11] Verificando Python 3 y pip3..."
 if ! command -v python3 &> /dev/null; then
     echo "Error: python3 no está instalado."
     echo "Instálalo con:"
@@ -27,11 +27,11 @@ if ! command -v pip3 &> /dev/null; then
 fi
 
 # 2. Instalar librería MCP
-echo "[2/10] Instalando dependencia 'mcp'..."
+echo "[2/11] Instalando dependencia 'mcp'..."
 pip3 install mcp --break-system-packages 2>/dev/null || pip3 install mcp
 
 # 3. Detectar CLIs de agentes
-echo "[3/10] Detectando gemini, opencode, ollama y kiro..."
+echo "[3/11] Detectando gemini, opencode, ollama y kiro..."
 GEMINI_PATH=$(which gemini 2>/dev/null || true)
 OPENCODE_PATH=$(which opencode 2>/dev/null || true)
 OLLAMA_PATH=$(which ollama 2>/dev/null || true)
@@ -62,7 +62,7 @@ else
 fi
 
 # 4. Preparar directorios
-echo "[4/10] Creando ~/mcp-servers/ y directorios de trabajo CORRAL..."
+echo "[4/11] Creando ~/mcp-servers/ y directorios de trabajo CORRAL..."
 mkdir -p ~/mcp-servers
 mkdir -p ~/misRepos/corral/gemini \
          ~/misRepos/corral/opencode \
@@ -71,7 +71,7 @@ mkdir -p ~/misRepos/corral/gemini \
          ~/misRepos/corral/tasks
 
 # 5. Copiar scripts
-echo "[5/10] Copiando scripts desde servers/..."
+echo "[5/11] Copiando scripts desde servers/..."
 cp servers/base.py ~/mcp-servers/
 cp servers/gemini_mcp.py ~/mcp-servers/
 cp servers/opencode_mcp.py ~/mcp-servers/
@@ -81,8 +81,41 @@ cp servers/kiro_mcp.py ~/mcp-servers/
 chmod +x ~/mcp-servers/opencode-wrapper.sh
 echo "  Scripts copiados a ~/mcp-servers/"
 
-# 6. Configurar modelo de OpenCode
-echo "[6/10] Configurando modelo para OpenCode..."
+# 6. Configurar modelo de Gemini
+echo "[6/11] Configurando modelo para Gemini..."
+if [ -n "$GEMINI_PATH" ]; then
+    DEFAULT_GEMINI_MODEL="gemini-2.5-flash"
+    read -p "  Introduce el modelo de Gemini a usar [$DEFAULT_GEMINI_MODEL]: " GEMINI_MODEL
+    GEMINI_MODEL=${GEMINI_MODEL:-$DEFAULT_GEMINI_MODEL}
+
+    GEMINI_EXPORT="export CORRAL_GEMINI_MODEL=\"$GEMINI_MODEL\""
+
+    if [ -f "$HOME/.bashrc" ]; then
+        if ! grep -q "CORRAL_GEMINI_MODEL" "$HOME/.bashrc"; then
+            echo "$GEMINI_EXPORT" >> "$HOME/.bashrc"
+            echo "  Añadido a ~/.bashrc"
+        else
+            sed -i "s|export CORRAL_GEMINI_MODEL=.*|$GEMINI_EXPORT|" "$HOME/.bashrc"
+            echo "  Actualizado en ~/.bashrc"
+        fi
+    fi
+
+    if [ -f "$HOME/.zshrc" ]; then
+        if ! grep -q "CORRAL_GEMINI_MODEL" "$HOME/.zshrc"; then
+            echo "$GEMINI_EXPORT" >> "$HOME/.zshrc"
+            echo "  Añadido a ~/.zshrc"
+        else
+            sed -i "s|export CORRAL_GEMINI_MODEL=.*|$GEMINI_EXPORT|" "$HOME/.zshrc"
+            echo "  Actualizado en ~/.zshrc"
+        fi
+    fi
+
+    export CORRAL_GEMINI_MODEL="$GEMINI_MODEL"
+    echo "  CORRAL_GEMINI_MODEL=$GEMINI_MODEL configurado."
+fi
+
+# 7. Configurar modelo de OpenCode
+echo "[7/11] Configurando modelo para OpenCode..."
 if [ -n "$OPENCODE_PATH" ]; then
     echo "  Modelos disponibles:"
     opencode models 2>/dev/null || echo "  No se pudieron listar modelos (¿estás autenticado?)"
@@ -116,8 +149,8 @@ if [ -n "$OPENCODE_PATH" ]; then
     export CORRAL_OPENCODE_MODEL="$SELECTED_MODEL"
 fi
 
-# 7. Configurar modelo de Ollama
-echo "[7/10] Configurando modelo para Ollama..."
+# 8. Configurar modelo de Ollama
+echo "[8/11] Configurando modelo para Ollama..."
 if [ -n "$OLLAMA_PATH" ]; then
     echo "  Modelos Ollama instalados:"
     ollama list 2>/dev/null || echo "  No se pudieron listar modelos (¿está corriendo el servicio ollama?)"
@@ -152,8 +185,8 @@ if [ -n "$OLLAMA_PATH" ]; then
     echo "  CORRAL_OLLAMA_MODEL=$OLLAMA_MODEL configurado."
 fi
 
-# 8. Verificar Kiro
-echo "[8/10] Verificando Kiro..."
+# 9. Verificar Kiro
+echo "[9/11] Verificando Kiro..."
 if [ -n "$KIRO_PATH" ]; then
     KIRO_VERSION=$("$KIRO_PATH" --version 2>/dev/null || echo "desconocida")
     echo "  kiro-cli-chat operativo. Versión: $KIRO_VERSION"
@@ -163,8 +196,8 @@ else
     echo "  El servidor kiro_mcp.py quedará instalado pero inactivo hasta que esté disponible."
 fi
 
-# 9. Mostrar bloque de permisos para Claude Code
-echo "[9/10] Configuración de permisos para Claude Code..."
+# 10. Mostrar bloque de permisos para Claude Code
+echo "[10/11] Configuración de permisos para Claude Code..."
 echo "  Asegúrate de que ~/.claude/settings.json incluya lo siguiente:"
 cat <<EOF
 
@@ -181,8 +214,8 @@ cat <<EOF
 
 EOF
 
-# 10. Registrar servidores en Claude Code
-echo "[10/10] Registrando servidores en Claude Code..."
+# 11. Registrar servidores en Claude Code
+echo "[11/11] Registrando servidores en Claude Code..."
 if command -v claude &> /dev/null; then
     claude mcp add gemini --scope user -- python3 "$HOME/mcp-servers/gemini_mcp.py"
     claude mcp add opencode --scope user -- python3 "$HOME/mcp-servers/opencode_mcp.py"
