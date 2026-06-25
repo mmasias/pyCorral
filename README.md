@@ -126,6 +126,14 @@ Claude Code (orquestador)
         └── kiro_mcp.py  ->  kiro-cli-chat CLI  ->  Kiro (AWS)
 ```
 
+### El contrato mínimo
+
+CORRAL no está acoplado a LLMs. El contrato que debe cumplir cualquier worker es ejecutarse de forma no interactiva, recibir instrucciones (vía argumentos o ficheros) y escribir resultados en un directorio de trabajo. Lo que haya dentro del proceso es irrelevante para el orquestador.
+
+Hoy los workers son LLMs invocados desde CLI. Mañana pueden ser un renderizador de diagramas (PlantUML, Graphviz), un verificador formal (TLC, Alloy), un sintetizador de audio (Csound) o un transcodificador multimedia (ffmpeg).
+
+La diferencia entre CORRAL y un coordinador de procesos estático (Make, Snakemake, Airflow) no es que los workers sean LLMs. Es que el coordinador —Claude— razona en tiempo de ejecución: decide qué delegar, a quién y cuándo recoger, en función del estado real del proyecto, sin un DAG declarado de antemano.
+
 ### El sistema de ficheros como bus de datos
 
 - El output de cada agente son ficheros escritos en un directorio de trabajo (workdir).
@@ -185,6 +193,7 @@ Frente a plataformas SaaS: la ventaja es control total. La contrapartida es real
 | **[AutoGen](https://microsoft.github.io/autogen/)** | Conversación entre agentes sofisticada | Complejo, opinionado, difícil de controlar el flujo | CORRAL delega el criterio al orquestador (Claude Code), no a un framework |
 | **[n8n](https://n8n.io/) / [Make](https://www.make.com/)** | Visual, rápido para flujos simples | Ejecuta recetas fijas, sin razonamiento | CORRAL no ejecuta un flujo predefinido: Claude Code decide en tiempo real qué delegar, a quién y cuándo recoger |
 | **[Dify](https://dify.ai/) / [Flowise](https://flowiseai.com/)** | GUI, cero código | Tus datos en servidores ajenos, sin control real | CORRAL corre en tu máquina, tus tokens van directo a cada proveedor, sin intermediarios |
+| **[Make](https://www.gnu.org/software/make/) / [Snakemake](https://snakemake.github.io/) / [Airflow](https://airflow.apache.org/)** | Coordinan procesos arbitrarios, no solo LLMs | El grafo de tareas está declarado de antemano; el coordinador no razona | En CORRAL el coordinador es Claude: decide en tiempo real qué delegar, a quién y cuándo recoger, en función del estado real del proyecto |
 
 </div>
 
@@ -412,11 +421,13 @@ Es CPU-only — los modelos grandes son lentos en hardware sin GPU. Opciones:
 
 ## Extensiones y ecosistema
 
-### Incorporar nuevos agentes
+### Incorporar nuevos workers
 
-- **Paso 1**: verificar modo no-interactivo del CLI
-- **Paso 2**: verificar comportamiento de stdout
-- **Paso 3**: copiar `gemini_mcp.py` como plantilla, cambiar nombre de servidor, herramientas y comando
+Cualquier ejecutable con modo no interactivo puede convertirse en herramienta del corral — no solo LLMs. Los pasos son los mismos independientemente de lo que haya dentro del proceso:
+
+- **Paso 1**: verificar modo no-interactivo (`--batch`, `-y`, argumentos directos — sin prompts de teclado)
+- **Paso 2**: verificar que el proceso escribe resultados en el directorio de trabajo actual
+- **Paso 3**: copiar `gemini_mcp.py` como plantilla; adaptar el comando y los parámetros de entrada
 - **Paso 4**: registrar con `claude mcp add` y añadir permiso en `settings.json`
 
 ### CORRAL + myClaudeContext
