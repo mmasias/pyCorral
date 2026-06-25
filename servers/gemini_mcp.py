@@ -22,6 +22,7 @@ def _find_gemini() -> str:
 
 
 GEMINI_BIN = _find_gemini()
+GEMINI_MODEL = os.environ.get("CORRAL_GEMINI_MODEL", "gemini-2.5-flash")
 
 
 class GeminiMCP(BaseAgentMCP):
@@ -38,7 +39,7 @@ class GeminiMCP(BaseAgentMCP):
 
     def _invoke_sync(self, prompt: str, workdir: str, **kwargs) -> str:
         proc = subprocess.run(
-            [GEMINI_BIN, "-y", "-p", prompt],
+            [GEMINI_BIN, "-m", GEMINI_MODEL, "-y", "-p", prompt],
             cwd=workdir,
             stdin=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL,
@@ -53,7 +54,7 @@ class GeminiMCP(BaseAgentMCP):
         log_path = f"/tmp/gemini_job_{job_id}.log"
         log_file = open(log_path, "w")
         proc = subprocess.Popen(
-            [GEMINI_BIN, "-y", "-p", prompt],
+            [GEMINI_BIN, "-m", GEMINI_MODEL, "-y", "-p", prompt],
             cwd=workdir,
             stdin=subprocess.DEVNULL,
             stdout=log_file,
