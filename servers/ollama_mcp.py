@@ -140,22 +140,32 @@ class OllamaMCP(BaseAgentMCP):
                 with open(os.path.join(workdir, "output.md"), "w") as f:
                     f.write(response)
                 self._jobs[job_id]["result"] = "listo"
+                self._update_job_state(job_id, "done")
             except Exception as e:
                 with open(log_path, "w") as f:
                     f.write(str(e))
                 self._jobs[job_id]["result"] = f"error: {e}"
+                self._update_job_state(job_id, "error")
 
         t = threading.Thread(target=worker, daemon=True)
-        self._jobs[job_id] = {"result": None, "log_path": log_path, "thread": t}
+        # pid: None porque Ollama usa threading, no subprocess
+        self._jobs[job_id] = {"result": None, "log_path": log_path, "workdir": workdir, "thread": t, "pid": None}
         t.start()
 
     def _poll(self, job_id: str) -> str:
         entry = self._jobs.get(job_id)
         if entry is None:
+            state = self._job_state.get(job_id)
+            if state:
+                return self._status_to_response(state["status"])
             return f"error: job {job_id} no encontrado"
+        result = self._poll_reconstructed(job_id, entry)
+        if result is not None:
+            return result
         if entry["thread"].is_alive():
             return "pendiente"
         result = entry["result"] or "error: resultado desconocido"
+        self._update_job_state(job_id, "done" if result == "listo" else "error")
         del self._jobs[job_id]
         return result
 
