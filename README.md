@@ -1,7 +1,7 @@
 # CORRAL – Orquestador multi-agente para Claude Code
 
 <div align=right>
-<sub><b>CORRAL: Claude Orchestrated Runtime for Remote Agent Loop</b><i><br>Motor de orquestación agnóstico del método</i></sub>
+<sub><b>CORRAL: </b>Composable Orchestration Runtime, Agnostic to Labor<br>Capa de Orquestación para el Reparto de Recursos, Agnóstica a la Labor</sub>
 </div>
 
 [![Python 3](https://img.shields.io/badge/Python-3.x-blue.svg)]()
