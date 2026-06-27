@@ -155,7 +155,7 @@ Los tres servidores son estructuralmente idénticos — solo difieren en el meca
 
 | Limitación            | Descripción                                                                                 |
 |---|---|
-| Persistencia volátil  | \_jobs vive en memoria del proceso MCP. Un reinicio de sesión pierde todos los job\_ids activos. |
+| Logs de error en /tmp | El estado de los jobs persiste entre reinicios en `~/.local/share/corral/`. Los detalles de error (logs en `/tmp`) pueden perderse si el SO reinicia antes de que el job sea consultado. |
 | Sin retry automático  | Si un agente falla a mitad de tarea, no hay rollback ni reintento.                         |
 | Sin observabilidad    | No hay logs estructurados del ciclo de vida de cada job.                                    |
 | Aislamiento por convención | La seguridad depende de que el prompt especifique un workdir adecuado.                  |
@@ -379,7 +379,7 @@ ls /tmp/oc_test/
 
 ### error: job\_id no encontrado
 
-`_jobs` es efímero. Lanzar y recoger en la misma sesión de Claude Code.
+El estado de los jobs persiste entre reinicios de Claude Code en `~/.local/share/corral/jobs_<agente>.json`. Este error indica un job\_id que nunca existió o que fue resuelto antes de que el servidor arrancara por primera vez con esta versión.
 
 ### \_done cuelga indefinidamente
 
