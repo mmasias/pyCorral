@@ -95,7 +95,7 @@ class OpenCodeMCP(BaseAgentMCP):
         if entry is None:
             state = self._job_state.get(job_id)
             if state:
-                return state["status"]
+                return self._status_to_response(state["status"])
             return f"error: job {job_id} no encontrado"
         result = self._poll_reconstructed(job_id, entry)
         if result is not None:

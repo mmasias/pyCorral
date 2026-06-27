@@ -101,6 +101,12 @@ class BaseAgentMCP(ABC):
             }
         return {"pid": None, "log_path": None}
 
+    _STATUS_TO_RESPONSE = {"done": "listo", "running": "pendiente"}
+
+    def _status_to_response(self, status: str) -> str:
+        """Traduce vocabulario interno de _job_state al contrato externo de _done."""
+        return self._STATUS_TO_RESPONSE.get(status, status)
+
     def _update_job_state(self, job_id: str, status: str) -> None:
         """Actualiza status en _job_state y persiste. Llamar antes de del self._jobs[job_id]."""
         if job_id in self._job_state:
@@ -209,7 +215,7 @@ class BaseAgentMCP(ABC):
         if entry is None:
             state = self._job_state.get(job_id)
             if state:
-                return state["status"]
+                return self._status_to_response(state["status"])
             return f"error: job {job_id} no encontrado"
 
         result = self._poll_reconstructed(job_id, entry)
