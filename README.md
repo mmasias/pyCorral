@@ -26,15 +26,15 @@ Casos de uso típicos:
 
 ## Quickstart
 
-Objetivo: tener CORRAL funcionando con **Gemini** en 5–10 minutos.
+Objetivo: tener CORRAL funcionando con **OpenCode** en 5–10 minutos, sin cuenta externa ni configuración de modelo.
 
 ### 1. Requisitos mínimos
 
 - Claude Code instalado (`npm install -g @anthropic-ai/claude-code`)
-- Gemini CLI instalado y autenticado
+- OpenCode instalado (`npm install -g opencode-ai`)
 - Python 3.x con pip3 disponible
 
-(Opcional: OpenCode, Ollama, Kiro – ver sección de instalación completa.)
+(Opcional: Gemini, Ollama, Kiro – ver sección de instalación completa.)
 
 ### 2. Instalar dependencia MCP
 
@@ -55,13 +55,16 @@ git clone https://github.com/mmasias/pyCorral
 cd pyCorral
 
 mkdir -p ~/mcp-servers
-cp servers/gemini_mcp.py ~/mcp-servers/
+cp servers/base.py ~/mcp-servers/
+cp servers/opencode_mcp.py ~/mcp-servers/
+cp servers/opencode-wrapper.sh ~/mcp-servers/
+chmod +x ~/mcp-servers/opencode-wrapper.sh
 ```
 
-### 4. Registrar el servidor Gemini en Claude Code
+### 4. Registrar el servidor OpenCode en Claude Code
 
 ```bash
-claude mcp add gemini --scope user -- python3 ~/mcp-servers/gemini_mcp.py
+claude mcp add opencode --scope user -- python3 ~/mcp-servers/opencode_mcp.py
 claude mcp list
 ```
 
@@ -69,20 +72,20 @@ claude mcp list
 
 En una sesión de Claude Code:
 
-1. `gemini_run` síncrono:
+1. `opencode_run` síncrono:
 
    - `prompt`: `Crea un fichero llamado hola.txt con el texto "hola mundo"`
-   - `workdir`: `/tmp/corral-quickstart`
+   - `workdir`: `~/misRepos/corral/opencode`
 
 2. Verificar el resultado con las herramientas de Claude:
 
-   - `Glob` en `/tmp/corral-quickstart`
-   - `Read` en `/tmp/corral-quickstart/hola.txt`
+   - `Glob` en `~/misRepos/corral/opencode`
+   - `Read` en `~/misRepos/corral/opencode/hola.txt`
 
-Si ves el fichero, CORRAL está funcionando. A partir de aquí puedes:
+Si ves el fichero, CORRAL está funcionando. El modelo por defecto es `opencode/deepseek-v4-flash-free` — sin autenticación ni cuota. A partir de aquí puedes:
 
-- Añadir OpenCode / Ollama / Kiro (ver instalación completa).
-- Probar el modo `gemini_run_async` + `gemini_done`.
+- Añadir Gemini / Ollama / Kiro (ver instalación completa).
+- Probar el modo `opencode_run_async` + `opencode_done`.
 - Explorar patrones de orquestación paralela.
 
 ## ¿Por qué?
