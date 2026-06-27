@@ -88,18 +88,25 @@ class OpenCodeMCP(BaseAgentMCP):
             stdout=out_f,
             stderr=log_f,
         )
-        self._jobs[job_id] = (proc, log_path, out_f, log_f)
+        self._jobs[job_id] = (proc, log_path, workdir, out_f, log_f)
 
     def _poll(self, job_id: str) -> str:
         entry = self._jobs.get(job_id)
         if entry is None:
+            state = self._job_state.get(job_id)
+            if state:
+                return state["status"]
             return f"error: job {job_id} no encontrado"
-        proc, log_path, out_f, log_f = entry
+        result = self._poll_reconstructed(job_id, entry)
+        if result is not None:
+            return result
+        proc, log_path, workdir, out_f, log_f = entry
         ret = proc.poll()
         if ret is None:
             return "pendiente"
         out_f.close()
         log_f.close()
+        self._update_job_state(job_id, "done" if ret == 0 else "error")
         del self._jobs[job_id]
         if ret == 0:
             return "listo"

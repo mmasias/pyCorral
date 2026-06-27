@@ -60,7 +60,7 @@ class GeminiMCP(BaseAgentMCP):
             stdout=log_file,
             stderr=log_file,
         )
-        self._jobs[job_id] = (proc, log_path)
+        self._jobs[job_id] = (proc, log_path, workdir)
 
     def _poll(self, job_id: str) -> str:
         return self._poll_popen(job_id)

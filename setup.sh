@@ -69,6 +69,7 @@ mkdir -p ~/misRepos/corral/gemini \
          ~/misRepos/corral/ollama \
          ~/misRepos/corral/kiro \
          ~/misRepos/corral/tasks
+mkdir -p ~/.local/share/corral
 
 # 5. Copiar scripts
 echo "[5/11] Copiando scripts desde servers/..."
