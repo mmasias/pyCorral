@@ -124,8 +124,9 @@ class OllamaMCP(BaseAgentMCP):
         model = kwargs.get("model", DEFAULT_MODEL)
         try:
             response = _call_ollama(prompt, model, workdir)
-            with open(os.path.join(workdir, "output.md"), "w") as f:
-                f.write(response)
+            if response.strip():
+                with open(os.path.join(workdir, "output.md"), "w") as f:
+                    f.write(response)
             return "ok"
         except Exception as e:
             return f"error: {e}"
@@ -137,8 +138,9 @@ class OllamaMCP(BaseAgentMCP):
         def worker():
             try:
                 response = _call_ollama(prompt, model, workdir, timeout=None)
-                with open(os.path.join(workdir, "output.md"), "w") as f:
-                    f.write(response)
+                if response.strip():
+                    with open(os.path.join(workdir, "output.md"), "w") as f:
+                        f.write(response)
                 self._jobs[job_id]["result"] = "listo"
                 self._update_job_state(job_id, "done")
             except Exception as e:
