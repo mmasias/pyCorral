@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
-from mcp.types import TextContent, Tool
+from mcp.types import CallToolResult, ListToolsResult, TextContent, Tool
 
 CORRAL_DATA_DIR = os.path.expanduser("~/.local/share/corral")
 
@@ -17,9 +17,7 @@ class BaseAgentMCP(ABC):
         self.default_workdir = default_workdir
         self._jobs: dict = {}
         self._job_state: dict = {}  # siempre serializable: {job_id: {status, workdir, log_path, pid}}
-        self.app = Server(server_name)
-        self.app.list_tools()(self._list_tools)
-        self.app.call_tool()(self._call_tool)
+        self.app = Server(server_name, on_list_tools=self._list_tools, on_call_tool=self._call_tool)
         os.makedirs(CORRAL_DATA_DIR, exist_ok=True)
         self._load_jobs()
 
@@ -154,7 +152,7 @@ class BaseAgentMCP(ABC):
     def _extra_args(self, arguments: dict) -> dict:
         return {}
 
-    async def _list_tools(self):
+    async def _list_tools(self, ctx, params) -> ListToolsResult:
         n = self.agent_name
         wd = self.default_workdir.replace(os.path.expanduser("~"), "~")
         sync_desc, async_desc, done_desc = self._descriptions()
@@ -163,7 +161,7 @@ class BaseAgentMCP(ABC):
             "workdir": {"type": "string", "description": f"Directorio de trabajo (default: {wd})"},
             **self._extra_schema_props(),
         }
-        return [
+        return ListToolsResult(tools=[
             Tool(
                 name=f"{n}_run",
                 description=sync_desc,
@@ -183,15 +181,18 @@ class BaseAgentMCP(ABC):
                     "required": ["job_id"],
                 },
             ),
-        ]
+        ])
 
-    async def _call_tool(self, name: str, arguments: dict):
+    async def _call_tool(self, ctx, params) -> CallToolResult:
         n = self.agent_name
+        name = params.name
+        arguments = params.arguments or {}
+
         if name == f"{n}_run":
             workdir = os.path.expanduser(arguments.get("workdir", self.default_workdir))
             os.makedirs(workdir, exist_ok=True)
             text = self._invoke_sync(arguments["prompt"], workdir, **self._extra_args(arguments))
-            return [TextContent(type="text", text=text)]
+            return CallToolResult(content=[TextContent(type="text", text=text)])
 
         if name == f"{n}_run_async":
             job_id = uuid.uuid4().hex[:8]
@@ -201,10 +202,10 @@ class BaseAgentMCP(ABC):
             meta = self._extract_meta(job_id)
             self._job_state[job_id] = {"status": "running", "workdir": workdir, **meta}
             self._persist_jobs()
-            return [TextContent(type="text", text=job_id)]
+            return CallToolResult(content=[TextContent(type="text", text=job_id)])
 
         if name == f"{n}_done":
-            return [TextContent(type="text", text=self._poll(arguments["job_id"]))]
+            return CallToolResult(content=[TextContent(type="text", text=self._poll(arguments["job_id"]))])
 
         raise ValueError(f"Herramienta desconocida: {name}")
 
