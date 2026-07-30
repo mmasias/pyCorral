@@ -28,7 +28,7 @@ fi
 
 # 2. Instalar librería MCP
 echo "[2/11] Instalando dependencia 'mcp'..."
-pip3 install mcp --break-system-packages 2>/dev/null || pip3 install mcp
+pip3 install --upgrade mcp --break-system-packages 2>/dev/null || pip3 install --upgrade mcp
 
 # 3. Detectar CLIs de agentes
 echo "[3/11] Detectando gemini, opencode, ollama y kiro..."
