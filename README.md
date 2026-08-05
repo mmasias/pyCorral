@@ -258,8 +258,10 @@ chmod +x ~/mcp-servers/opencode-wrapper.sh
 Añadir a `~/.bashrc` o `~/.zshrc`:
 
 ```bash
-export CORRAL_OPENCODE_MODEL="zai-coding-plan/glm-5.1"  # sustituir por el modelo detectado
+export CORRAL_OPENCODE_MODEL="zai-coding-plan/glm-5.2"  # sustituir por el modelo detectado
 ```
+
+Los proveedores retiran modelos con el tiempo -- si este valor lleva meses sin tocarse, volver a correr `opencode models` antes de asumir que sigue existiendo.
 
 ### Configurar Ollama (opcional)
 
@@ -369,6 +371,10 @@ python3 ~/mcp-servers/gemini_mcp.py
 - PATH incorrecto: los scripts usan detección automática, pero verificar con `which gemini`
 - Modelo no disponible: verificar con `opencode models`
 - opencode no autenticado: ejecutar opencode en TUI
+
+### Cambié `CORRAL_OPENCODE_MODEL` (o `CORRAL_GEMINI_MODEL`/`CORRAL_OLLAMA_MODEL`) en `~/.bashrc` y sigue fallando igual
+
+Los servidores MCP son procesos Python de larga duración que capturan `os.environ` una sola vez, al arrancar. Editar `~/.bashrc` no lo actualiza en un proceso ya en marcha -- solo afecta a shells nuevas. Hay que reiniciar el proceso que tiene la variable vieja en memoria (reiniciar Claude Code, o matar el proceso `python3 .../opencode_mcp.py` correspondiente y dejar que el cliente MCP lo relance) antes de que el fix surta efecto. Confundir esto con un problema de API key o de modelo (que dan el mismo síntoma: el job falla o se queda colgado) cuesta tiempo de diagnóstico -- verificar primero si el proceso del servidor lleva vivo más tiempo que el cambio en `~/.bashrc`.
 
 ### OpenCode no crea ficheros en workdir
 
