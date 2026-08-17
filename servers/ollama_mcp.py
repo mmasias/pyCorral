@@ -42,9 +42,20 @@ _TOOLS = [
 ]
 
 
+def _resolve_workdir_path(filename: str, workdir: str) -> str:
+    # El modelo a veces pasa una ruta absoluta o con ~ en vez del nombre
+    # relativo que pide la tool (ej. "~/misRepos/corral/ollama/x.md" en vez
+    # de "x.md"). os.path.join no trata "~..." como absoluto, así que sin
+    # esto se creaba un directorio literal "~" anidado dentro del workdir.
+    expanded = os.path.expanduser(filename)
+    if os.path.isabs(expanded):
+        return expanded
+    return os.path.join(workdir, expanded)
+
+
 def _execute_tool(name: str, args: dict, workdir: str) -> str:
     if name == "write_file":
-        path = os.path.join(workdir, args["filename"])
+        path = _resolve_workdir_path(args["filename"], workdir)
         parent = os.path.dirname(path)
         if parent:
             os.makedirs(parent, exist_ok=True)
@@ -52,7 +63,7 @@ def _execute_tool(name: str, args: dict, workdir: str) -> str:
             f.write(args["content"])
         return f"ok: '{args['filename']}' escrito."
     if name == "read_file":
-        path = os.path.join(workdir, args["filename"])
+        path = _resolve_workdir_path(args["filename"], workdir)
         try:
             with open(path) as f:
                 return f.read()
@@ -104,8 +115,10 @@ class OllamaMCP(BaseAgentMCP):
     def _descriptions(self):
         n = self.agent_name
         return (
-            f"Ejecuta una inferencia en Ollama de forma sincrona. La respuesta se escribe en output.md dentro de workdir.",
-            f"Ejecuta una inferencia en Ollama en segundo plano y devuelve un job_id. La respuesta se escribe en output.md dentro de workdir.",
+            "Ejecuta una inferencia en Ollama de forma sincrona. La respuesta se escribe en output.md dentro de workdir.",
+            "Ejecuta una inferencia en Ollama en segundo plano y devuelve un job_id. La respuesta se escribe en output.md "
+            "(ultimo resultado, puede ser sobrescrito por otra invocacion concurrente al mismo workdir) y tambien en "
+            "output-<job_id>.md (exclusivo de este job, usalo si puede haber invocaciones concurrentes).",
             f"Consulta el estado de un job lanzado con {n}_run_async.",
         )
 
@@ -139,8 +152,23 @@ class OllamaMCP(BaseAgentMCP):
             try:
                 response = _call_ollama(prompt, model, workdir, timeout=None)
                 if response.strip():
+                    # output-<job_id>.md es exclusivo de este job: dos invocaciones
+                    # concurrentes al mismo workdir (misma sesion con 2 jobs, o dos
+                    # sesiones CORRAL distintas) no pueden pisarse aqui. output.md
+                    # fijo se mantiene ademas por compatibilidad con el mecanismo
+                    # de reconstruccion de base.py tras un reinicio del servidor,
+                    # pero puede ser sobrescrito por otra invocacion concurrente.
+                    with open(os.path.join(workdir, f"output-{job_id}.md"), "w") as f:
+                        f.write(response)
                     with open(os.path.join(workdir, "output.md"), "w") as f:
                         f.write(response)
+                # A diferencia de gemini/opencode/kiro (que vuelcan su stdout al
+                # log siempre), Ollama antes solo escribia log_path en el except.
+                # Eso dejaba el panel de corral-tail sin nada que seguir en el
+                # camino feliz: se escribe tambien aqui para que haya actividad
+                # visible tanto en exito como en error.
+                with open(log_path, "w") as f:
+                    f.write(response if response.strip() else "(respuesta vacia)")
                 self._jobs[job_id]["result"] = "listo"
                 self._update_job_state(job_id, "done")
             except Exception as e:
