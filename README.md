@@ -106,7 +106,7 @@ El sistema opera bajo una separación de responsabilidades clara:
 
 | Control Plane              | Data Plane                                  |
 |---|---|
-| **Claude Code**           | **Gemini, OpenCode, Ollama**                |
+| **Claude Code**           | **Gemini, OpenCode, Ollama, Qwen, Gemma, Kiro** |
 | Decide, planifica, delega y ensambla. Es la unidad de razonamiento. | Ejecutan subproblemas acotados, producen artefactos y terminan sin estado persistente. No saben que están siendo orquestados. |
 
 ```
@@ -123,6 +123,14 @@ Claude Code (orquestador)
 │
 ├── ollama_run / ollama_run_async / ollama_done
 │       └── ollama_mcp.py  ->  HTTP API  ->  Ollama (local)
+│
+│
+├── qwen_run / qwen_run_async / qwen_done
+│       └── qwen_mcp.py (OllamaAgentMCP)  ->  HTTP API  ->  Ollama qwen2.5:7b
+│
+│
+├── gemma_run / gemma_run_async / gemma_done
+│       └── gemma_mcp.py (OllamaAgentMCP)  ->  HTTP API  ->  Ollama gemma3-it-qat-tools:4b
 │
 │
 └── kiro_run / kiro_run_async / kiro_done
@@ -148,11 +156,11 @@ Esto elimina la dependencia de flujos de texto volátiles y permite verificació
 
 | Herramienta                                             | Modo     | Comportamiento                                                       |
 |---|---|---|
-| gemini\_run / opencode\_run / ollama\_run / kiro\_run   | Síncrono | Bloquea hasta terminar; escribe ficheros en workdir                 |
-| gemini\_run\_async / opencode\_run\_async / ollama\_run\_async / kiro\_run\_async | Async     | Devuelve job\_id inmediatamente                                      |
-| gemini\_done / opencode\_done / ollama\_done / kiro\_done | Consulta | Devuelve "pendiente", "listo" o "error: ..."                        |
+| gemini\_run / opencode\_run / ollama\_run / qwen\_run / gemma\_run / kiro\_run   | Síncrono | Bloquea hasta terminar; escribe ficheros en workdir                 |
+| gemini\_run\_async / opencode\_run\_async / ollama\_run\_async / qwen\_run\_async / gemma\_run\_async / kiro\_run\_async | Async     | Devuelve job\_id inmediatamente                                      |
+| gemini\_done / opencode\_done / ollama\_done / qwen\_done / gemma\_done / kiro\_done | Consulta | Devuelve "pendiente", "listo" o "error: ..."                        |
 
-Los tres servidores son estructuralmente idénticos — solo difieren en el mecanismo de invocación. Los tokens de Gemini y OpenCode se imputan a su propio proveedor; Ollama es local y no tiene coste de API.
+Los servidores son estructuralmente idénticos — solo difieren en el mecanismo de invocación. Los tokens de Gemini y OpenCode se imputan a su propio proveedor; Ollama (y sus becarios qwen y gemma) es local y no tiene coste de API.
 
 ### Limitaciones actuales
 
@@ -172,6 +180,8 @@ Los tres servidores son estructuralmente idénticos — solo difieren en el meca
 | Gemini              | Verificador / critic          | ~30 segundos       |
 | OpenCode / GLM-5.1  | Generador / arquitecto        | ~2-3 minutos       |
 | Ollama / qwen2.5:7b | Inferencia local con function calling / sin coste de API | variable (CPU-only) |
+| Qwen (qwen2.5:7b)   | Becario Ollama por modelo, workdir propio (`~/misRepos/corral/qwen`) | variable (CPU-only) |
+| Gemma (gemma3-it-qat-tools:4b) | Becario Ollama por modelo, workdir propio (`~/misRepos/corral/gemma`) | variable (CPU-only) |
 | Kiro                | Agente AWS / desarrollo con contexto de proyecto | ~30-60 segundos |
 
 ### Paralelismo real
@@ -249,6 +259,8 @@ cp servers/gemini_mcp.py ~/mcp-servers/
 cp servers/opencode_mcp.py ~/mcp-servers/
 cp servers/opencode-wrapper.sh ~/mcp-servers/
 cp servers/ollama_mcp.py ~/mcp-servers/
+cp servers/qwen_mcp.py ~/mcp-servers/
+cp servers/gemma_mcp.py ~/mcp-servers/
 cp servers/kiro_mcp.py ~/mcp-servers/
 chmod +x ~/mcp-servers/opencode-wrapper.sh
 ```
@@ -271,14 +283,32 @@ Verificar que Ollama está corriendo:
 curl http://127.0.0.1:11434/api/tags
 ```
 
-Para usar un modelo distinto al default (`qwen2.5:7b`), añadir a `~/.bashrc` o `~/.zshrc`:
+Hay tres becarios respaldados por Ollama, todos instancias de la clase `OllamaAgentMCP`:
+
+| Becario | Servidor | Modelo default | Variable de entorno | Workdir default |
+|---|---|---|---|---|
+| `ollama` | ollama_mcp.py | qwen2.5:7b | `CORRAL_OLLAMA_MODEL` | `~/misRepos/corral/ollama` |
+| `qwen` | qwen_mcp.py | qwen2.5:7b | `CORRAL_QWEN_MODEL` | `~/misRepos/corral/qwen` |
+| `gemma` | gemma_mcp.py | aliafshar/gemma3-it-qat-tools:4b | `CORRAL_GEMMA_MODEL` | `~/misRepos/corral/gemma` |
+
+Para cambiar el modelo de un becario, añadir a `~/.bashrc` o `~/.zshrc`:
 
 ```bash
 export CORRAL_OLLAMA_MODEL="nombre-del-modelo"
-export CORRAL_OLLAMA_URL="http://127.0.0.1:11434"  # si escucha en otro puerto
+export CORRAL_QWEN_MODEL="nombre-del-modelo"
+export CORRAL_GEMMA_MODEL="nombre-del-modelo"
+export CORRAL_OLLAMA_URL="http://127.0.0.1:11434"  # si escucha en otro puerto (compartido por los tres)
 ```
 
-El servidor usa function calling (endpoint `/api/chat` con tools). El modelo debe soportar tool use — `qwen2.5` (cualquier tamaño), `llama3.1` y `mistral-nemo` son opciones probadas.
+Los servidores usan function calling (endpoint `/api/chat` con tools). El modelo debe declarar la capability `tools` — verificar con:
+
+```bash
+curl -s http://127.0.0.1:11434/api/show -d '{"model": "nombre-del-modelo"}' | python3 -c "import sys,json; print(json.load(sys.stdin).get('capabilities'))"
+```
+
+`qwen2.5` (cualquier tamaño), `llama3.1`, `mistral-nemo` y `aliafshar/gemma3-it-qat-tools:4b` son opciones probadas. Ojo: `gemma3` nativo (`gemma3:latest`, `gemma3:1b`) **no** soporta tools en Ollama (error 400) — de ahí el fine-tune QAT como default del becario gemma.
+
+Cualquiera de los tres acepta además el parámetro `model` por llamada para usar un modelo puntual distinto del default.
 
 Modelos disponibles:
 
@@ -292,6 +322,8 @@ ollama list
 python3 -c "import ast; ast.parse(open('servers/gemini_mcp.py').read()); print('ok')"
 python3 -c "import ast; ast.parse(open('servers/opencode_mcp.py').read()); print('ok')"
 python3 -c "import ast; ast.parse(open('servers/ollama_mcp.py').read()); print('ok')"
+python3 -c "import ast; ast.parse(open('servers/qwen_mcp.py').read()); print('ok')"
+python3 -c "import ast; ast.parse(open('servers/gemma_mcp.py').read()); print('ok')"
 python3 -c "import ast; ast.parse(open('servers/kiro_mcp.py').read()); print('ok')"
 
 mkdir -p /tmp/gemini_test
@@ -315,6 +347,8 @@ Añadir a `~/.claude/settings.json`:
       "mcp__gemini__*",
       "mcp__opencode__*",
       "mcp__ollama__*",
+      "mcp__qwen__*",
+      "mcp__gemma__*",
       "mcp__kiro__*"
     ]
   }
@@ -327,6 +361,8 @@ Añadir a `~/.claude/settings.json`:
 claude mcp add gemini --scope user -- python3 ~/mcp-servers/gemini_mcp.py
 claude mcp add opencode --scope user -- python3 ~/mcp-servers/opencode_mcp.py
 claude mcp add ollama --scope user -- python3 ~/mcp-servers/ollama_mcp.py
+claude mcp add qwen --scope user -- python3 ~/mcp-servers/qwen_mcp.py
+claude mcp add gemma --scope user -- python3 ~/mcp-servers/gemma_mcp.py
 claude mcp add kiro --scope user -- python3 ~/mcp-servers/kiro_mcp.py
 claude mcp list
 ```
@@ -339,7 +375,11 @@ Prueba 2 - Gemini sync: `gemini_run` con workdir `/tmp/gtest`, crear `resumen.md
 
 Prueba 3 - Ollama sync: `ollama_run` con workdir `/tmp/oltest`, crear `resumen.md`
 
-Prueba 4 - async: `opencode_run_async`, anotar `job_id`, recoger con `opencode_done`
+Prueba 4 - Qwen sync: `qwen_run` con workdir `/tmp/qwtest`, crear `resumen.md`
+
+Prueba 5 - Gemma sync: `gemma_run` con workdir `/tmp/gmtest`, crear `resumen.md`
+
+Prueba 6 - async: `opencode_run_async`, anotar `job_id`, recoger con `opencode_done`
 
 ### Patrón de orquestación paralela
 

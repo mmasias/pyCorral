@@ -67,6 +67,8 @@ mkdir -p ~/mcp-servers
 mkdir -p ~/misRepos/corral/gemini \
          ~/misRepos/corral/opencode \
          ~/misRepos/corral/ollama \
+         ~/misRepos/corral/qwen \
+         ~/misRepos/corral/gemma \
          ~/misRepos/corral/kiro \
          ~/misRepos/corral/tasks
 mkdir -p ~/.local/share/corral
@@ -78,6 +80,8 @@ cp servers/gemini_mcp.py ~/mcp-servers/
 cp servers/opencode_mcp.py ~/mcp-servers/
 cp servers/opencode-wrapper.sh ~/mcp-servers/
 cp servers/ollama_mcp.py ~/mcp-servers/
+cp servers/qwen_mcp.py ~/mcp-servers/
+cp servers/gemma_mcp.py ~/mcp-servers/
 cp servers/kiro_mcp.py ~/mcp-servers/
 chmod +x ~/mcp-servers/opencode-wrapper.sh
 echo "  Scripts copiados a ~/mcp-servers/"
@@ -150,40 +154,37 @@ if [ -n "$OPENCODE_PATH" ]; then
     export CORRAL_OPENCODE_MODEL="$SELECTED_MODEL"
 fi
 
-# 8. Configurar modelo de Ollama
-echo "[8/11] Configurando modelo para Ollama..."
+# 8. Configurar modelos de Ollama (ollama generico + becarios qwen y gemma)
+echo "[8/11] Configurando modelos de Ollama (ollama / qwen / gemma)..."
 if [ -n "$OLLAMA_PATH" ]; then
     echo "  Modelos Ollama instalados:"
     ollama list 2>/dev/null || echo "  No se pudieron listar modelos (¿está corriendo el servicio ollama?)"
 
-    DEFAULT_OLLAMA_MODEL="qwen2.5:7b"
-    read -p "  Introduce el modelo de Ollama a usar [$DEFAULT_OLLAMA_MODEL]: " OLLAMA_MODEL
-    OLLAMA_MODEL=${OLLAMA_MODEL:-$DEFAULT_OLLAMA_MODEL}
+    for entry in "ollama:qwen2.5:7b" "qwen:qwen2.5:7b" "gemma:aliafshar/gemma3-it-qat-tools:4b"; do
+        AGENT="${entry%%:*}"
+        AGENT_DEFAULT_MODEL="${entry#*:}"
+        read -p "  Modelo para el becario '$AGENT' [$AGENT_DEFAULT_MODEL]: " AGENT_MODEL
+        AGENT_MODEL=${AGENT_MODEL:-$AGENT_DEFAULT_MODEL}
 
-    OLLAMA_EXPORT="export CORRAL_OLLAMA_MODEL=\"$OLLAMA_MODEL\""
+        AGENT_EXPORT="export CORRAL_${AGENT^^}_MODEL=\"$AGENT_MODEL\""
 
-    if [ -f "$HOME/.bashrc" ]; then
-        if ! grep -q "CORRAL_OLLAMA_MODEL" "$HOME/.bashrc"; then
-            echo "$OLLAMA_EXPORT" >> "$HOME/.bashrc"
-            echo "  Añadido a ~/.bashrc"
-        else
-            sed -i "s|export CORRAL_OLLAMA_MODEL=.*|$OLLAMA_EXPORT|" "$HOME/.bashrc"
-            echo "  Actualizado en ~/.bashrc"
-        fi
-    fi
+        for RC_FILE in "$HOME/.bashrc" "$HOME/.zshrc"; do
+            if [ -f "$RC_FILE" ]; then
+                if ! grep -q "CORRAL_${AGENT^^}_MODEL" "$RC_FILE"; then
+                    echo "$AGENT_EXPORT" >> "$RC_FILE"
+                else
+                    sed -i "s|export CORRAL_${AGENT^^}_MODEL=.*|$AGENT_EXPORT|" "$RC_FILE"
+                fi
+            fi
+        done
 
-    if [ -f "$HOME/.zshrc" ]; then
-        if ! grep -q "CORRAL_OLLAMA_MODEL" "$HOME/.zshrc"; then
-            echo "$OLLAMA_EXPORT" >> "$HOME/.zshrc"
-            echo "  Añadido a ~/.zshrc"
-        else
-            sed -i "s|export CORRAL_OLLAMA_MODEL=.*|$OLLAMA_EXPORT|" "$HOME/.zshrc"
-            echo "  Actualizado en ~/.zshrc"
-        fi
-    fi
+        export CORRAL_${AGENT^^}_MODEL="$AGENT_MODEL"
+        echo "  CORRAL_${AGENT^^}_MODEL=$AGENT_MODEL configurado."
+    done
 
-    export CORRAL_OLLAMA_MODEL="$OLLAMA_MODEL"
-    echo "  CORRAL_OLLAMA_MODEL=$OLLAMA_MODEL configurado."
+    echo "  Nota: los modelos de estos becarios deben soportar tools (ver 'capabilities')"
+    echo "  con: curl -s http://127.0.0.1:11434/api/show -d '{\"model\": \"<nombre>\"}'"
+    echo "  gemma3:latest y gemma3:1b NO las soportan; aliafshar/gemma3-it-qat-tools:4b sí."
 fi
 
 # 9. Verificar Kiro
@@ -208,6 +209,8 @@ cat <<EOF
       "mcp__gemini__*",
       "mcp__opencode__*",
       "mcp__ollama__*",
+      "mcp__qwen__*",
+      "mcp__gemma__*",
       "mcp__kiro__*"
     ]
   }
@@ -221,12 +224,16 @@ if command -v claude &> /dev/null; then
     claude mcp add gemini --scope user -- python3 "$HOME/mcp-servers/gemini_mcp.py"
     claude mcp add opencode --scope user -- python3 "$HOME/mcp-servers/opencode_mcp.py"
     claude mcp add ollama --scope user -- python3 "$HOME/mcp-servers/ollama_mcp.py"
+    claude mcp add qwen --scope user -- python3 "$HOME/mcp-servers/qwen_mcp.py"
+    claude mcp add gemma --scope user -- python3 "$HOME/mcp-servers/gemma_mcp.py"
     claude mcp add kiro --scope user -- python3 "$HOME/mcp-servers/kiro_mcp.py"
 else
     echo "  Aviso: no se encontró el comando 'claude'. Regístralos manualmente:"
     echo "  claude mcp add gemini --scope user -- python3 ~/mcp-servers/gemini_mcp.py"
     echo "  claude mcp add opencode --scope user -- python3 ~/mcp-servers/opencode_mcp.py"
     echo "  claude mcp add ollama --scope user -- python3 ~/mcp-servers/ollama_mcp.py"
+    echo "  claude mcp add qwen --scope user -- python3 ~/mcp-servers/qwen_mcp.py"
+    echo "  claude mcp add gemma --scope user -- python3 ~/mcp-servers/gemma_mcp.py"
     echo "  claude mcp add kiro --scope user -- python3 ~/mcp-servers/kiro_mcp.py"
 fi
 
