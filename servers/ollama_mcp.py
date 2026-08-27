@@ -7,7 +7,6 @@ from base import BaseAgentMCP, run
 
 
 OLLAMA_URL = os.environ.get("CORRAL_OLLAMA_URL", "http://127.0.0.1:11434")
-DEFAULT_MODEL = os.environ.get("CORRAL_OLLAMA_MODEL", "qwen2.5:7b")
 
 _TOOLS = [
     {
@@ -108,9 +107,20 @@ def _call_ollama(prompt: str, model: str, workdir: str, timeout: int = 600) -> s
     return "error: límite de iteraciones alcanzado."
 
 
-class OllamaMCP(BaseAgentMCP):
-    def __init__(self):
-        super().__init__("ollama", "ollama-mcp", os.path.expanduser("~/misRepos/corral/ollama"))
+class OllamaAgentMCP(BaseAgentMCP):
+    """Becario CORRAL respaldado por un modelo de Ollama.
+
+    Clase genérica: cada becario por modelo (qwen, gemma, ollama) es una
+    instancia con su agent_name, workdir y variable de entorno de modelo.
+    El parámetro `model` de las tools permite sobreescribir el modelo por
+    llamada en cualquiera de ellas.
+    """
+
+    def __init__(self, agent_name: str, server_name: str, default_workdir: str,
+                 model_env_var: str, fallback_model: str):
+        super().__init__(agent_name, server_name, default_workdir)
+        self.model_env_var = model_env_var
+        self.default_model = os.environ.get(model_env_var, fallback_model)
 
     def _descriptions(self):
         n = self.agent_name
@@ -126,15 +136,15 @@ class OllamaMCP(BaseAgentMCP):
         return {
             "model": {
                 "type": "string",
-                "description": f"Modelo Ollama (default: {DEFAULT_MODEL}, configurable via CORRAL_OLLAMA_MODEL)",
+                "description": f"Modelo Ollama (default: {self.default_model}, configurable via {self.model_env_var})",
             }
         }
 
     def _extra_args(self, arguments: dict) -> dict:
-        return {"model": arguments.get("model", DEFAULT_MODEL)}
+        return {"model": arguments.get("model", self.default_model)}
 
     def _invoke_sync(self, prompt: str, workdir: str, **kwargs) -> str:
-        model = kwargs.get("model", DEFAULT_MODEL)
+        model = kwargs.get("model", self.default_model)
         try:
             response = _call_ollama(prompt, model, workdir)
             if response.strip():
@@ -145,8 +155,8 @@ class OllamaMCP(BaseAgentMCP):
             return f"error: {e}"
 
     def _invoke_async(self, job_id: str, prompt: str, workdir: str, **kwargs) -> None:
-        model = kwargs.get("model", DEFAULT_MODEL)
-        log_path = f"/tmp/ollama_job_{job_id}.log"
+        model = kwargs.get("model", self.default_model)
+        log_path = f"/tmp/{self.agent_name}_job_{job_id}.log"
 
         def worker():
             try:
@@ -198,6 +208,17 @@ class OllamaMCP(BaseAgentMCP):
         self._update_job_state(job_id, "done" if result == "listo" else "error")
         del self._jobs[job_id]
         return result
+
+
+class OllamaMCP(OllamaAgentMCP):
+    def __init__(self):
+        super().__init__(
+            "ollama",
+            "ollama-mcp",
+            os.path.expanduser("~/misRepos/corral/ollama"),
+            "CORRAL_OLLAMA_MODEL",
+            "qwen2.5:7b",
+        )
 
 
 if __name__ == "__main__":
